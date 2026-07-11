@@ -28,6 +28,7 @@ if settings.SQLALCHEMY_DATABASE_URI.startswith("sqlite"):
 import app.album.models  # noqa: E402, F401
 import app.blog.models  # noqa: E402, F401
 import app.core.models  # noqa: E402, F401
+import app.settings.models  # noqa: E402, F401
 
 
 async def create_db_and_tables() -> None:
@@ -40,7 +41,6 @@ async def init_db(session: AsyncSession) -> None:
     """初始化数据库：创建管理员账户、角色、权限"""
     from app.core.models import (
         Permission,
-        Profile,
         Role,
         RolePermission,
         User,
@@ -120,16 +120,11 @@ async def init_db(session: AsyncSession) -> None:
             username=settings.FIRST_SUPERUSER.split("@")[0],
             email=settings.FIRST_SUPERUSER,
             hashed_password=get_password_hash(settings.FIRST_SUPERUSER_PASSWORD),
+            display_name=settings.FIRST_SUPERUSER.split("@")[0],
+            is_owner=True,
         )
         session.add(user)
         await session.flush()
-
-        # 创建管理员资料
-        profile = Profile(
-            user_id=user.id,
-            display_name=settings.FIRST_SUPERUSER.split("@")[0],
-        )
-        session.add(profile)
 
         # 赋予 admin 角色
         session.add(UserRole(user_id=user.id, role_id=admin_role.id))
@@ -145,5 +140,10 @@ async def init_db(session: AsyncSession) -> None:
     ).first()
     if not existing_ur:
         session.add(UserRole(user_id=user.id, role_id=admin_role.id))
+
+    # 数据修复：确保初始管理员被标记为博主
+    if not user.is_owner:
+        user.is_owner = True
+        session.add(user)
 
     await session.commit()

@@ -565,3 +565,75 @@ export async function fetchPublicAlbum(
   return request<PublicAlbumView>(`/albums/${encodeURIComponent(slug)}`);
 }
 
+// ── Settings（设置）─────────────────────────────────
+
+export interface ProfileSettings {
+  display_name: string;
+  avatar: string | null;
+  bio: string | null;
+  github: string | null;
+  website: string | null;
+  is_owner: boolean;
+}
+
+export interface SiteSettings {
+  site_title: string;
+  site_subtitle: string;
+  footer_text: string;
+  icp: string;
+}
+
+export async function getProfileSettings(
+  token: string
+): Promise<ProfileSettings> {
+  return request<ProfileSettings>("/admin/settings/profile", {
+    headers: authHeaders(token),
+  });
+}
+
+export async function updateProfileSettings(
+  token: string,
+  data: Partial<ProfileSettings>
+): Promise<ProfileSettings> {
+  return request<ProfileSettings>("/admin/settings/profile", {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getSiteSettings(token: string): Promise<SiteSettings> {
+  return request<SiteSettings>("/admin/settings/site", {
+    headers: authHeaders(token),
+  });
+}
+
+export async function updateSiteSettings(
+  token: string,
+  data: Partial<SiteSettings>
+): Promise<SiteSettings> {
+  return request<SiteSettings>("/admin/settings/site", {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  });
+}
+
+// ── Settings（前台公开：站点信息 + 博主公开信息）────────
+
+export interface PublicAuthor {
+  display_name: string;
+  bio: string | null;
+  avatar: string | null;
+  github: string | null;
+  website: string | null;
+}
+
+export interface PublicSiteInfo extends SiteSettings {
+  author: PublicAuthor;
+}
+
+export async function fetchPublicSiteInfo(): Promise<PublicSiteInfo> {
+  return request<PublicSiteInfo>("/site-settings");
+}
+

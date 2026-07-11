@@ -43,6 +43,7 @@ import {
   Home,
   ChevronsUpDown,
   ChevronRight,
+  Settings,
 } from "lucide-react";
 
 const navMain = [
@@ -61,6 +62,14 @@ const navMain = [
     items: [
       { title: "所有文件", url: "/admin/media" },
       { title: "相册", url: "/admin/albums" },
+    ],
+  },
+  {
+    title: "设置",
+    icon: Settings,
+    items: [
+      { title: "博主设置", url: "/admin/settings/profile" },
+      { title: "网页设置", url: "/admin/settings/site" },
     ],
   },
 ];

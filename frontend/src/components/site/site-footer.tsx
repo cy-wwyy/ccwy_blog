@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { Rss, Heart } from "lucide-react";
+import { useSiteInfo } from "@/components/site/site-info";
 
 // lucide v1 移除了品牌图标，GitHub logo 用内联 SVG 保持识别度
 function GithubIcon({ size = 16 }: { size?: number }) {
@@ -17,15 +20,35 @@ function GithubIcon({ size = 16 }: { size?: number }) {
 }
 
 export function SiteFooter() {
+  const info = useSiteInfo();
+  const year = new Date().getFullYear();
+  const copyright =
+    info?.footer_text?.trim() ||
+    `© ${year} ${info?.site_title?.trim() || "CCWY"}`;
+  const github = info?.author?.github?.trim() || "https://github.com/cy-wwyy";
+  const icp = info?.icp?.trim();
+
   return (
     <footer className="theme-content border-t border-border/50 mt-auto">
       <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>© {new Date().getFullYear()} CCWY</span>
-          <span className="text-border">·</span>
-          <span className="inline-flex items-center gap-1">
-            用 <Heart size={12} className="text-red-500 fill-red-500" /> 构建
-          </span>
+        <div className="flex flex-col items-center gap-1 sm:items-start">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>{copyright}</span>
+            <span className="text-border">·</span>
+            <span className="inline-flex items-center gap-1">
+              用 <Heart size={12} className="text-red-500 fill-red-500" /> 构建
+            </span>
+          </div>
+          {icp && (
+            <Link
+              href="https://beian.miit.gov.cn"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-muted-foreground/70 hover:text-foreground transition-colors"
+            >
+              {icp}
+            </Link>
+          )}
         </div>
 
         <div className="flex items-center gap-4">
@@ -38,7 +61,7 @@ export function SiteFooter() {
             RSS
           </Link>
           <Link
-            href="https://github.com/cy-wwyy"
+            href={github}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="GitHub"

@@ -1,22 +1,39 @@
 from datetime import datetime
-from typing import Optional
 
 from pydantic import EmailStr
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, Index, text
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.core.utils import generate_ulid, get_datetime_utc
 
-# ── User 表（认证）───────────────────────────────────
+# ── User 表（认证 + 博主资料）─────────────────────────
 
 
 class User(SQLModel, table=True):
+    # 博主标识全站唯一：部分唯一索引仅约束 is_owner 为真的行，
+    # 允许任意多个非博主用户（SQLite 与 PostgreSQL 均支持部分索引）。
+    __table_args__ = (
+        Index(
+            "uq_user_owner",
+            "is_owner",
+            unique=True,
+            sqlite_where=text("is_owner = 1"),
+            postgresql_where=text("is_owner = true"),
+        ),
+    )
+
     id: str = Field(default_factory=generate_ulid, primary_key=True)
     username: str = Field(unique=True, index=True, max_length=64)
     email: EmailStr = Field(unique=True, index=True, max_length=255)
     hashed_password: str
     avatar: str | None = Field(default=None, max_length=512)
     bio: str | None = Field(default=None, max_length=1024)
+    # 博主展示资料（原 Profile 表并入）
+    display_name: str | None = Field(default=None, max_length=64)
+    github: str | None = Field(default=None, max_length=256)
+    website: str | None = Field(default=None, max_length=256)
+    # 博主标识：全站唯一，标记谁是站点博主
+    is_owner: bool = Field(default=False)
     is_active: bool = True
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,
@@ -24,7 +41,6 @@ class User(SQLModel, table=True):
     )
 
     # 关系
-    profile: Optional["Profile"] = Relationship(back_populates="user")
     user_roles: list["UserRole"] = Relationship(back_populates="user")
 
 
@@ -53,19 +69,6 @@ class Media(SQLModel, table=True):
     )
 
     uploader: User = Relationship()
-
-
-# ── Profile 表（博主资料）──────────────────────────────
-
-
-class Profile(SQLModel, table=True):
-    id: str = Field(default_factory=generate_ulid, primary_key=True)
-    user_id: str = Field(foreign_key="user.id", unique=True, nullable=False)
-    display_name: str = Field(max_length=64)
-    github: str | None = Field(default=None, max_length=256)
-    website: str | None = Field(default=None, max_length=256)
-
-    user: User = Relationship(back_populates="profile")
 
 
 # ── 权限 & 角色 ──────────────────────────────────────

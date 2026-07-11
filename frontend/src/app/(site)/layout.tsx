@@ -5,6 +5,7 @@ import { TopToolbar } from "@/components/site/top-toolbar";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteRightAside } from "@/components/site/site-right-aside";
 import { BackgroundOrbs } from "@/components/site/background-orbs";
+import { SiteInfoProvider } from "@/components/site/site-info";
 import { Particles } from "@/components/ui/particles";
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
@@ -21,30 +22,32 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
         vx={0.1}
         vy={0.1}
       />
-      <SidebarProvider
-        defaultOpen
-        style={{ "--sidebar-width": "12.8rem" } as CSSProperties}
-      >
-        <SiteSidebar />
-        <SidebarInset className="bg-transparent flex flex-col">
-          {/* 顶部工具栏 */}
-          <TopToolbar />
+      <SiteInfoProvider>
+        <SidebarProvider
+          defaultOpen
+          style={{ "--sidebar-width": "12.8rem" } as CSSProperties}
+        >
+          <SiteSidebar />
+          <SidebarInset className="bg-transparent flex flex-col">
+            {/* 顶部工具栏 */}
+            <TopToolbar />
 
-          {/* 下方：主内容 + 右栏 */}
-          <div className="flex flex-1 overflow-hidden">
-            {/* 主内容区 */}
-            <main className="flex-1 overflow-y-auto theme-content">{children}</main>
+            {/* 下方：主内容 + 右栏 */}
+            <div className="flex flex-1 overflow-hidden">
+              {/* 主内容区 */}
+              <main className="flex-1 overflow-y-auto theme-content">{children}</main>
 
-            {/* 右栏 — 移动端隐藏 */}
-            <aside className="hidden lg:block w-[220px] overflow-y-auto shrink-0 theme-content border-l border-border/30">
-              <SiteRightAside />
-            </aside>
-          </div>
+              {/* 右栏 — 移动端隐藏 */}
+              <aside className="hidden lg:block w-[220px] overflow-y-auto shrink-0 theme-content border-l border-border/30">
+                <SiteRightAside />
+              </aside>
+            </div>
 
-          {/* Footer */}
-          <SiteFooter />
-        </SidebarInset>
-      </SidebarProvider>
+            {/* Footer */}
+            <SiteFooter />
+          </SidebarInset>
+        </SidebarProvider>
+      </SiteInfoProvider>
     </div>
   );
 }

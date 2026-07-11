@@ -12,16 +12,17 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 import { Home, Images, Info, LayoutGrid, ChevronRight, Camera } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { fetchPublicCategories, type CategoryPublic } from "@/lib/api";
+import { useSiteInfo } from "@/components/site/site-info";
 import { cn } from "@/lib/utils";
 
-// 占位作者信息 — 后端站点设置接口就绪后替换
-const AUTHOR = { name: "CCWY", bio: "记录技术与生活" };
+// 站点信息未就绪时的兜底文案
+const FALLBACK_AUTHOR = { name: "CCWY", bio: "记录技术与生活" };
 
 const navItems = [
   { href: "/", label: "首页", icon: Home },
@@ -56,6 +57,11 @@ function buildTree(cats: CategoryPublic[]): CatNode[] {
 }
 
 export function SiteSidebar() {
+  const info = useSiteInfo();
+  const author = info?.author;
+  const name = author?.display_name || FALLBACK_AUTHOR.name;
+  const bio = author?.bio || FALLBACK_AUTHOR.bio;
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="pb-2">
@@ -63,19 +69,20 @@ export function SiteSidebar() {
           <HoverCard>
             <HoverCardTrigger>
               <Avatar className="size-16 ring-2 ring-sidebar-border shadow-md cursor-pointer transition-transform hover:scale-105">
+                {author?.avatar && <AvatarImage src={author.avatar} alt={name} />}
                 <AvatarFallback className="text-xl font-bold bg-sidebar-primary text-sidebar-primary-foreground">
-                  {AUTHOR.name.charAt(0)}
+                  {name.charAt(0)}
                 </AvatarFallback>
               </Avatar>
             </HoverCardTrigger>
             <HoverCardContent side="right" className="w-48 text-sm">
-              <div className="font-semibold">{AUTHOR.name}</div>
-              <p className="text-xs text-muted-foreground mt-1">{AUTHOR.bio}</p>
+              <div className="font-semibold">{name}</div>
+              <p className="text-xs text-muted-foreground mt-1">{bio}</p>
             </HoverCardContent>
           </HoverCard>
           <div className="text-center">
-            <p className="text-sm font-semibold leading-tight">{AUTHOR.name}</p>
-            <p className="text-[11px] text-muted-foreground leading-relaxed text-center">{AUTHOR.bio}</p>
+            <p className="text-sm font-semibold leading-tight">{name}</p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed text-center">{bio}</p>
           </div>
         </div>
       </SidebarHeader>
