@@ -1,0 +1,36 @@
+# ===== 与前后端项目无关的工具 / 辅助文件 =====
+.claude/
+.agents/
+.mcp.json
+REVIEW.md
+
+# ===== 打包产物 =====
+*.zip
+
+# ===== Python / 后端 =====
+.venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+
+# ===== 环境变量（含真实密钥，严禁提交） =====
+.env
+.env.*
+!.env.example
+
+# ===== 数据库 / 上传内容 =====
+*.db
+*.sqlite3
+backend/uploads/
+
+# ===== Node / 前端（与 frontend/.gitignore 叠加，双保险） =====
+node_modules/
+.next/
+/build
+/out
+
+# ===== 编辑器 / 系统 =====
+.DS_Store
+*.log

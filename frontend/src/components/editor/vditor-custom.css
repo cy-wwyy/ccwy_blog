@@ -1,0 +1,19 @@
+/* Vditor 对齐 shadcn 风格 */
+.vditor {
+  border: none !important;
+  box-shadow: none !important;
+}
+.vditor-toolbar {
+  padding-left: 4px !important;
+}
+.vditor-toolbar .vditor-toolbar__item {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.vditor-toolbar .vditor-toolbar__item button {
+  padding: 0 2px !important;
+}
+.vditor-toolbar .vditor-toolbar__item svg {
+  width: 14px !important;
+  height: 14px !important;
+}
