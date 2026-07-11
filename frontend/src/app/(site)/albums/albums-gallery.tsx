@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Camera } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchPublicAlbums, type AlbumPublic } from "@/lib/api";
+import { fetchPublicAlbums, type PublicAlbumCard } from "@/lib/api";
 
 // 瀑布流骨架 —— 列优先、高度错落，贴近真实布局
 const SKELETON_HEIGHTS = [180, 140, 220, 160, 200, 150];
@@ -24,7 +24,7 @@ function GallerySkeleton() {
 }
 
 export function AlbumsGallery() {
-  const [albums, setAlbums] = useState<AlbumPublic[] | null>(null);
+  const [albums, setAlbums] = useState<PublicAlbumCard[] | null>(null);
 
   useEffect(() => {
     let active = true;

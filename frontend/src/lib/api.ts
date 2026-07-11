@@ -519,19 +519,49 @@ export async function deleteAlbumPhoto(
 }
 
 // ── Album（前台公开浏览）────────────────────────────
+// 公开视图收敛了字段：不含 cover_media_id/is_public/sort_order/media_id
+
+export interface PublicAlbumPhoto {
+  id: string;
+  url: string;
+  thumb_url: string | null;
+  caption: string | null;
+}
+
+export interface PublicAlbumCard {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  cover_url: string | null;
+  photo_count: number;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface PublicAlbumView extends PublicAlbumCard {
+  photos: PublicAlbumPhoto[];
+}
+
+export interface PublicAlbumsResponse {
+  data: PublicAlbumCard[];
+  count: number;
+}
 
 export async function fetchPublicAlbums(params?: {
   skip?: number;
   limit?: number;
-}): Promise<AlbumsListResponse> {
+}): Promise<PublicAlbumsResponse> {
   const q = new URLSearchParams();
   if (params?.skip != null) q.set("skip", String(params.skip));
   if (params?.limit != null) q.set("limit", String(params.limit));
   const qs = q.toString();
-  return request<AlbumsListResponse>(`/albums${qs ? `?${qs}` : ""}`);
+  return request<PublicAlbumsResponse>(`/albums${qs ? `?${qs}` : ""}`);
 }
 
-export async function fetchPublicAlbum(slug: string): Promise<AlbumDetail> {
-  return request<AlbumDetail>(`/albums/${encodeURIComponent(slug)}`);
+export async function fetchPublicAlbum(
+  slug: string
+): Promise<PublicAlbumView> {
+  return request<PublicAlbumView>(`/albums/${encodeURIComponent(slug)}`);
 }
 

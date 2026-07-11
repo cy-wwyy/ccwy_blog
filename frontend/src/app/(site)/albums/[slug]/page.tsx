@@ -14,8 +14,8 @@ import {
 } from "@/components/ui/dialog";
 import {
   fetchPublicAlbum,
-  type AlbumDetail,
-  type AlbumPhotoPublic,
+  type PublicAlbumView,
+  type PublicAlbumPhoto,
 } from "@/lib/api";
 
 const SKELETON_HEIGHTS = [200, 150, 240, 170, 210, 160, 190, 140];
@@ -36,9 +36,9 @@ function GallerySkeleton() {
 
 export default function AlbumDetailPage() {
   const { slug } = useParams<{ slug: string }>();
-  const [album, setAlbum] = useState<AlbumDetail | null>(null);
+  const [album, setAlbum] = useState<PublicAlbumView | null>(null);
   const [notFound, setNotFound] = useState(false);
-  const [lightbox, setLightbox] = useState<AlbumPhotoPublic | null>(null);
+  const [lightbox, setLightbox] = useState<PublicAlbumPhoto | null>(null);
 
   useEffect(() => {
     let active = true;

@@ -116,3 +116,33 @@ class AlbumDetail(AlbumPublic):
 class AlbumsPublic(SQLModel):
     data: list[AlbumPublic]
     count: int
+
+
+# ── 前台公开视图（收敛字段：不暴露 cover_media_id/is_public/sort_order/media_id）──
+
+
+class AlbumPhotoView(SQLModel):
+    id: str
+    url: str
+    thumb_url: str | None = None
+    caption: str | None = None
+
+
+class AlbumCard(SQLModel):
+    id: str
+    title: str
+    slug: str
+    description: str | None = None
+    cover_url: str | None = None
+    photo_count: int = 0
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class AlbumView(AlbumCard):
+    photos: list[AlbumPhotoView] = []
+
+
+class AlbumsView(SQLModel):
+    data: list[AlbumCard]
+    count: int

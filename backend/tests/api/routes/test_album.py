@@ -34,6 +34,54 @@ def _album(**over: object) -> dict:
     return base
 
 
+async def test_public_endpoints_hide_internal_fields(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    # 建公开相册 + 挂一张照片
+    aid = (
+        await client.post(
+            f"{API}/admin/albums",
+            headers=auth,
+            json=_album(slug="pub", is_public=True),
+        )
+    ).json()["id"]
+    mid = await _upload_media(client, auth, b"pubimg")
+    await client.post(
+        f"{API}/admin/albums/{aid}/photos",
+        headers=auth,
+        json={"media_id": mid, "caption": "c"},
+    )
+
+    # 列表：不应暴露内部字段
+    card = (await client.get(f"{API}/albums")).json()["data"][0]
+    for leaked in ("cover_media_id", "is_public", "sort_order"):
+        assert leaked not in card, f"公开列表泄漏了 {leaked}"
+    assert {"id", "title", "slug", "cover_url", "photo_count"} <= card.keys()
+
+    # 详情：相册与照片都不应暴露内部字段
+    detail = (await client.get(f"{API}/albums/pub")).json()
+    for leaked in ("cover_media_id", "is_public", "sort_order"):
+        assert leaked not in detail
+    photo = detail["photos"][0]
+    assert "media_id" not in photo and "sort_order" not in photo
+    assert {"id", "url", "caption"} <= photo.keys()
+
+
+async def test_public_hides_non_public_album(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    await client.post(
+        f"{API}/admin/albums",
+        headers=auth,
+        json=_album(slug="secret", is_public=False),
+    )
+    # 列表不含私密相册
+    data = (await client.get(f"{API}/albums")).json()["data"]
+    assert all(a["slug"] != "secret" for a in data)
+    # 详情 404
+    assert (await client.get(f"{API}/albums/secret")).status_code == 404
+
+
 async def test_album_requires_auth(client: AsyncClient) -> None:
     resp = await client.get(f"{API}/admin/albums")
     assert resp.status_code == 401
