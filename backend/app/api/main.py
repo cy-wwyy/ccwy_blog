@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.album.admin_router import router as album_admin_router
+from app.album.public_router import router as album_public_router
 from app.api.login import router as login_router
 from app.blog.admin_categories import router as categories_admin_router
 from app.blog.admin_router import router as blog_admin_router
@@ -18,3 +19,4 @@ api_router.include_router(categories_admin_router)
 api_router.include_router(tags_admin_router)
 api_router.include_router(media_admin_router)
 api_router.include_router(album_admin_router)
+api_router.include_router(album_public_router)

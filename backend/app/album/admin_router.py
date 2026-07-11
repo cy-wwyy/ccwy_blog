@@ -2,7 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.album import crud
-from app.album.helpers import album_to_detail, album_to_public, photo_to_public
+from app.album.helpers import (
+    album_to_detail,
+    albums_to_public,
+    photo_to_public,
+)
 from app.album.models import (
     AlbumCreate,
     AlbumDetail,
@@ -63,7 +67,7 @@ async def admin_list_albums(
         session=session, skip=skip, limit=limit,
         is_public=is_public, search=search, sort_order=sort_order,
     )
-    data = [await album_to_public(session, a) for a in items]
+    data = await albums_to_public(session, items)
     return AlbumsPublic(data=data, count=count)
 
 

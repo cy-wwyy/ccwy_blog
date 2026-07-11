@@ -1,10 +1,20 @@
+from io import BytesIO
+
 import pytest
 from httpx import AsyncClient
+from PIL import Image
 
 from app.core.config import settings
 from app.media import admin_router as media_router
 
 API = settings.API_V1_STR
+
+
+def _real_png(width: int = 800, height: int = 600) -> bytes:
+    """生成一张真实 PNG，供缩略图生成用。"""
+    buf = BytesIO()
+    Image.new("RGB", (width, height), (120, 60, 200)).save(buf, format="PNG")
+    return buf.getvalue()
 
 
 @pytest.fixture(autouse=True)
@@ -76,3 +86,31 @@ async def test_upload_different_content_not_deduped(
     )
     assert r1.json()["id"] != r2.json()["id"]
     assert r2.json()["deduped"] is False
+
+
+async def test_upload_generates_thumbnail(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    # 真实栅格图 → 应生成 .thumb.webp 缩略图
+    resp = await client.post(
+        f"{API}/admin/media?module=album",
+        headers=auth,
+        files={"file": ("real.png", _real_png(), "image/png")},
+    )
+    assert resp.status_code == 200, resp.text
+    d = resp.json()
+    assert d["thumb_url"], "栅格图应生成缩略图"
+    assert d["thumb_url"].endswith(".thumb.webp")
+
+
+async def test_upload_svg_has_no_thumbnail(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    # svg 是矢量图，不生成缩略图
+    resp = await client.post(
+        f"{API}/admin/media",
+        headers=auth,
+        files={"file": ("icon.svg", b"<svg></svg>", "image/svg+xml")},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["thumb_url"] is None

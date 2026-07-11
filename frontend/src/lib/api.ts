@@ -347,6 +347,7 @@ export interface MediaUploadResult {
   id: string;
   filename: string;
   url: string;
+  thumb_url: string | null;
   mime_type: string;
   size: number;
   module: string;
@@ -378,6 +379,7 @@ export interface AlbumPhotoPublic {
   id: string;
   media_id: string;
   url: string;
+  thumb_url: string | null;
   caption: string | null;
   sort_order: number;
 }
@@ -514,5 +516,22 @@ export async function deleteAlbumPhoto(
     method: "DELETE",
     headers: authHeaders(token),
   });
+}
+
+// ── Album（前台公开浏览）────────────────────────────
+
+export async function fetchPublicAlbums(params?: {
+  skip?: number;
+  limit?: number;
+}): Promise<AlbumsListResponse> {
+  const q = new URLSearchParams();
+  if (params?.skip != null) q.set("skip", String(params.skip));
+  if (params?.limit != null) q.set("limit", String(params.limit));
+  const qs = q.toString();
+  return request<AlbumsListResponse>(`/albums${qs ? `?${qs}` : ""}`);
+}
+
+export async function fetchPublicAlbum(slug: string): Promise<AlbumDetail> {
+  return request<AlbumDetail>(`/albums/${encodeURIComponent(slug)}`);
 }
 

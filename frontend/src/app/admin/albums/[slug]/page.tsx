@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import {
   DndContext,
   closestCenter,
+  KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
@@ -17,6 +18,7 @@ import {
   SortableContext,
   arrayMove,
   rectSortingStrategy,
+  sortableKeyboardCoordinates,
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -68,6 +70,7 @@ interface SortablePhotoProps {
   onEditCaption: (photo: AlbumPhotoPublic) => void;
   onSetCover: (photo: AlbumPhotoPublic) => void;
   onDelete: (photo: AlbumPhotoPublic) => void;
+  onView: (photo: AlbumPhotoPublic) => void;
 }
 
 function SortablePhoto({
@@ -76,6 +79,7 @@ function SortablePhoto({
   onEditCaption,
   onSetCover,
   onDelete,
+  onView,
 }: SortablePhotoProps) {
   const {
     attributes,
@@ -99,15 +103,25 @@ function SortablePhoto({
       className="group relative overflow-hidden rounded-lg border bg-card"
     >
       <div className="relative aspect-square w-full overflow-hidden bg-muted">
-        <Image
-          src={photo.url}
-          alt={photo.caption || "照片"}
-          fill
-          unoptimized
-          className="object-cover"
-        />
+        {/* 点击查看原图（灯箱） */}
+        <button
+          type="button"
+          onClick={() => onView(photo)}
+          className="absolute inset-0 cursor-zoom-in"
+          aria-label="查看原图"
+          title="点击查看原图"
+        >
+          <Image
+            src={photo.thumb_url || photo.url}
+            alt={photo.caption || "照片"}
+            fill
+            unoptimized
+            sizes="(max-width: 640px) 50vw, (max-width: 1280px) 25vw, 20vw"
+            className="object-cover"
+          />
+        </button>
         {isCover && (
-          <Badge className="absolute left-2 top-2 gap-1">
+          <Badge className="pointer-events-none absolute left-2 top-2 gap-1">
             <Star className="size-3" /> 封面
           </Badge>
         )}
@@ -189,10 +203,14 @@ export default function AlbumDetailPage() {
   const [deleteTarget, setDeleteTarget] = useState<AlbumPhotoPublic | null>(
     null
   );
+  const [lightbox, setLightbox] = useState<AlbumPhotoPublic | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
   );
 
   useEffect(() => {
@@ -224,21 +242,26 @@ export default function AlbumDetailPage() {
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0 || !token || !album) return;
     setUploading(true);
+    let order = photos.length;
+    let count = 0;
     try {
-      let order = photos.length;
-      const added: AlbumPhotoPublic[] = [];
       for (const file of Array.from(files)) {
         const media = await uploadMedia(token, file, "album");
         const photo = await addAlbumPhoto(token, album.id, {
           media_id: media.id,
           sort_order: order++,
         });
-        added.push(photo);
+        // 每张成功即入 state —— 即便后续某张失败，已上传的也不会丢
+        setPhotos((prev) => [...prev, photo]);
+        count++;
       }
-      setPhotos((prev) => [...prev, ...added]);
-      toast.success(`已添加 ${added.length} 张照片`);
+      toast.success(`已添加 ${count} 张照片`);
     } catch (err) {
-      toast.error(errorMessage(err, "上传失败"));
+      toast.error(
+        count > 0
+          ? `已添加 ${count} 张，其余上传失败`
+          : errorMessage(err, "上传失败")
+      );
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -270,7 +293,13 @@ export default function AlbumDetailPage() {
       setPhotos((cur) => cur.map((p, idx) => ({ ...p, sort_order: idx })));
     } catch (err) {
       toast.error(errorMessage(err, "排序保存失败"));
-      setPhotos(prev); // 回滚
+      // 失败时从服务端拉权威顺序，避免回滚到过期快照（并发拖拽也安全）
+      try {
+        const fresh = await getAlbumBySlug(token, slug);
+        setPhotos(fresh.photos);
+      } catch {
+        setPhotos(prev); // 兜底：网络也挂了就回滚到拖前快照
+      }
     }
   };
 
@@ -423,6 +452,7 @@ export default function AlbumDetailPage() {
                 onEditCaption={openCaption}
                 onSetCover={setCover}
                 onDelete={setDeleteTarget}
+                onView={setLightbox}
               />
             ))}
           </SortableContext>
@@ -436,6 +466,37 @@ export default function AlbumDetailPage() {
         album={album}
         onSaved={(saved) => setAlbum((cur) => ({ ...saved, photos: cur?.photos ?? photos }))}
       />
+
+      {/* 原图灯箱 —— 盒子贴合图片原始比例，随图自适应 */}
+      <Dialog
+        open={!!lightbox}
+        onOpenChange={(open) => !open && setLightbox(null)}
+      >
+        <DialogContent
+          className="w-fit max-w-[95vw] justify-items-center gap-2 border-none bg-transparent p-0 ring-0 shadow-none sm:max-w-[95vw]"
+          showCloseButton={false}
+        >
+          <DialogHeader className="sr-only">
+            <DialogTitle>{lightbox?.caption || "查看原图"}</DialogTitle>
+            <DialogDescription>相册照片原图预览</DialogDescription>
+          </DialogHeader>
+          {lightbox && (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element -- 灯箱需按图片原始比例自适应，尺寸未知，next/image 的 fill 会强制固定容器 */}
+              <img
+                src={lightbox.url}
+                alt={lightbox.caption || "原图"}
+                className="max-h-[85vh] max-w-[95vw] rounded-lg object-contain"
+              />
+              {lightbox.caption && (
+                <p className="max-w-[95vw] truncate text-center text-sm text-white/90">
+                  {lightbox.caption}
+                </p>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* 图注编辑 */}
       <Dialog

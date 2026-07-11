@@ -84,7 +84,8 @@ class AlbumUpdate(SQLModel):
 class AlbumPhotoPublic(SQLModel):
     id: str
     media_id: str
-    url: str  # 由 storage 生成，router 填充
+    url: str  # 原图，由 storage 生成，router 填充
+    thumb_url: str | None = None  # 缩略图，无则前端回退原图
     caption: str | None = None
     sort_order: int = 0
 

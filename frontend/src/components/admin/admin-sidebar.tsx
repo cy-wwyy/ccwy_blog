@@ -15,7 +15,6 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
@@ -106,17 +105,17 @@ export function AdminSidebar() {
                   defaultOpen={section.isActive}
                   render={<SidebarMenuItem />}
                 >
-                  <SidebarMenuButton tooltip={section.title} render={<span />}>
-                    <section.icon />
-                    <span>{section.title}</span>
-                  </SidebarMenuButton>
                   <CollapsibleTrigger
                     render={
-                      <SidebarMenuAction className="aria-expanded:rotate-90" />
+                      <SidebarMenuButton
+                        tooltip={section.title}
+                        className="group/collapsible"
+                      />
                     }
                   >
-                    <ChevronRight />
-                    <span className="sr-only">展开 {section.title}</span>
+                    <section.icon />
+                    <span>{section.title}</span>
+                    <ChevronRight className="ml-auto transition-transform group-aria-expanded/collapsible:rotate-90" />
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <SidebarMenuSub>

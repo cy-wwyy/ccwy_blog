@@ -118,6 +118,21 @@ async def count_album_photos(
     return (await session.exec(stmt)).one()
 
 
+async def count_photos_by_album(
+    *, session: AsyncSession, album_ids: list[str]
+) -> dict[str, int]:
+    """一次聚合查询批量取各相册照片数，避免列表逐相册计数的 N+1。"""
+    if not album_ids:
+        return {}
+    stmt = (
+        select(AlbumPhoto.album_id, func.count())
+        .where(col(AlbumPhoto.album_id).in_(album_ids))
+        .group_by(col(AlbumPhoto.album_id))
+    )
+    rows = (await session.exec(stmt)).all()
+    return dict(rows)
+
+
 async def get_photo(
     *, session: AsyncSession, photo_id: str
 ) -> AlbumPhoto | None:

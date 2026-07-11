@@ -41,6 +41,8 @@ class Media(SQLModel, table=True):
     content_hash: str = Field(unique=True, index=True, max_length=64)
     width: int | None = None
     height: int | None = None
+    # 缩略图存储路径（栅格图上传时生成的 webp 小图），非图/生成失败则为空
+    thumb_path: str | None = Field(default=None, max_length=512)
     module: str = Field(max_length=64)
     module_id: str | None = None
     synced_to_oss: bool = Field(default=False)

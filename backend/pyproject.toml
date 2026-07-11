@@ -17,6 +17,7 @@ dependencies = [
     "aiosqlite>=0.22.1",
     "aiofiles>=25.1.0",
     "oss2>=2.19.1",
+    "pillow>=12.3.0",
 ]
 
 [dependency-groups]

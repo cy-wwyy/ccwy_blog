@@ -9,6 +9,7 @@ class MediaPublic(SQLModel):
     id: str
     filename: str
     url: str
+    thumb_url: str | None = None
     mime_type: str
     size: int
     module: str

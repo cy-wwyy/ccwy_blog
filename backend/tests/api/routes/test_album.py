@@ -39,6 +39,39 @@ async def test_album_requires_auth(client: AsyncClient) -> None:
     assert resp.status_code == 401
 
 
+async def test_list_albums_batches_photo_count(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    # 两个相册、照片数不同 —— 验证列表批量计数（albums_to_public）正确
+    a1 = (
+        await client.post(
+            f"{API}/admin/albums", headers=auth, json=_album(slug="a1")
+        )
+    ).json()["id"]
+    a2 = (
+        await client.post(
+            f"{API}/admin/albums", headers=auth, json=_album(slug="a2")
+        )
+    ).json()["id"]
+    for content in (b"x1", b"x2"):
+        mid = await _upload_media(client, auth, content)
+        await client.post(
+            f"{API}/admin/albums/{a1}/photos",
+            headers=auth,
+            json={"media_id": mid},
+        )
+    mid = await _upload_media(client, auth, b"y1")
+    await client.post(
+        f"{API}/admin/albums/{a2}/photos", headers=auth, json={"media_id": mid}
+    )
+
+    resp = await client.get(f"{API}/admin/albums", headers=auth)
+    assert resp.status_code == 200
+    counts = {a["id"]: a["photo_count"] for a in resp.json()["data"]}
+    assert counts[a1] == 2
+    assert counts[a2] == 1
+
+
 async def test_create_and_fetch_album(
     client: AsyncClient, auth: dict[str, str]
 ) -> None:
