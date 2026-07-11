@@ -4,6 +4,7 @@ from app.blog import crud
 from app.blog.helpers import category_to_public, post_to_detail, post_to_public
 from app.blog.models import CategoryPublic, PostDetail, PostsPublic
 from app.core.deps import SessionDep
+from app.stats import crud as stats_crud
 
 router = APIRouter()
 posts_router = APIRouter(prefix="/posts", tags=["posts"])
@@ -32,7 +33,13 @@ async def list_posts(
         status="published", is_public=True,
         category_id=category_id, search=search,
     )
-    return PostsPublic(data=[post_to_public(p) for p in items], count=count)
+    data = [post_to_public(p) for p in items]
+    views = await stats_crud.views_by_posts(
+        session=session, post_ids=[p.id for p in items]
+    )
+    for pub in data:
+        pub.views = views.get(pub.id, 0)
+    return PostsPublic(data=data, count=count)
 
 
 @posts_router.get("/{slug}", response_model=PostDetail)
@@ -42,4 +49,8 @@ async def get_post(session: SessionDep, slug: str) -> PostDetail:
         raise HTTPException(status_code=404, detail="文章不存在")
     if not post.is_public:
         raise HTTPException(status_code=404, detail="文章不存在")
-    return await post_to_detail(session, post)
+    detail = await post_to_detail(session, post)
+    detail.views = await stats_crud.count_post_views(
+        session=session, post_id=post.id
+    )
+    return detail

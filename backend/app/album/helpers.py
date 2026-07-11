@@ -12,6 +12,7 @@ from app.album.models import (
     AlbumPublic,
 )
 from app.core.models import Media
+from app.stats import crud as stats_crud
 from app.storage import storage
 
 # (原图 url, 缩略图 url|None)
@@ -76,25 +77,31 @@ async def album_to_public(
 ) -> AlbumPublic:
     cover = await _media_urls(session, album.cover_media_id)
     count = await crud.count_album_photos(session=session, album_id=album.id)
-    return _album_public(album, cover, count)
+    pub = _album_public(album, cover, count)
+    pub.views = await stats_crud.count_album_views(
+        session=session, album_id=album.id
+    )
+    return pub
 
 
 async def albums_to_public(
     session: AsyncSession, albums: list[Album]
 ) -> list[AlbumPublic]:
-    """批量转换：一条聚合查计数 + 一条 IN 查封面，避免列表逐相册 N+1。"""
-    counts = await crud.count_photos_by_album(
-        session=session, album_ids=[a.id for a in albums]
-    )
+    """批量转换：一条聚合查计数 + 一条 IN 查封面 + 一条聚合查浏览量，避免 N+1。"""
+    ids = [a.id for a in albums]
+    counts = await crud.count_photos_by_album(session=session, album_ids=ids)
     url_map = await _media_url_map(session, [a.cover_media_id for a in albums])
-    return [
-        _album_public(
+    view_map = await stats_crud.views_by_albums(session=session, album_ids=ids)
+    result = []
+    for a in albums:
+        pub = _album_public(
             a,
             url_map.get(a.cover_media_id or "", (None, None)),
             counts.get(a.id, 0),
         )
-        for a in albums
-    ]
+        pub.views = view_map.get(a.id, 0)
+        result.append(pub)
+    return result
 
 
 async def album_to_detail(

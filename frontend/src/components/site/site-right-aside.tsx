@@ -4,15 +4,19 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PenLine, Users, ArrowRight, TrendingUp } from "lucide-react";
-import { fetchPublicPosts } from "@/lib/api";
+import { fetchPublicPosts, fetchSiteStats } from "@/lib/api";
 
 export function SiteRightAside() {
   const [postCount, setPostCount] = useState<number | null>(null);
+  const [visitors, setVisitors] = useState<number | null>(null);
 
   useEffect(() => {
     fetchPublicPosts({ limit: 1 })
       .then((r) => setPostCount(r.count))
       .catch(() => setPostCount(0));
+    fetchSiteStats()
+      .then((s) => setVisitors(s.visitors_total))
+      .catch(() => setVisitors(0));
   }, []);
 
   return (
@@ -30,11 +34,15 @@ export function SiteRightAside() {
               <Skeleton className="ml-auto h-4 w-6" />
             )}
           </div>
-          {/* 访客数 — 后端访客统计接口就绪后接入 */}
+          {/* 访客数 — 整站累计独立访客（UV） */}
           <div className="flex items-center gap-2.5 text-sm">
             <Users size={14} className="text-muted-foreground shrink-0" />
             <span className="text-muted-foreground">访客</span>
-            <span className="ml-auto text-xs text-muted-foreground">—</span>
+            {visitors !== null ? (
+              <span className="ml-auto font-bold">{visitors}</span>
+            ) : (
+              <Skeleton className="ml-auto h-4 w-6" />
+            )}
           </div>
           <div className="flex items-center gap-2.5 text-sm">
             <TrendingUp size={14} className="text-muted-foreground shrink-0" />

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Camera } from "lucide-react";
+import { Camera, Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchPublicAlbums, type PublicAlbumCard } from "@/lib/api";
 
@@ -73,9 +73,13 @@ export function AlbumsGallery() {
               )}
               <div className="p-3">
                 <p className="truncate text-sm font-semibold">{album.title}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {album.photo_count} 张照片
-                </p>
+                <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{album.photo_count} 张照片</span>
+                  <span className="inline-flex items-center gap-1">
+                    <Eye size={12} />
+                    {album.views}
+                  </span>
+                </div>
               </div>
             </Link>
           ))}

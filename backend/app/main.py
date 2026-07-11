@@ -10,7 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.main import api_router
 from app.core.config import settings
-from app.core.db import create_db_and_tables, engine, init_db
+from app.core.db import engine, init_db
 from app.storage import storage
 
 
@@ -21,8 +21,8 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 启动时自动建表 + 创建初始管理员
-    await create_db_and_tables()
+    # 表结构由 Alembic 管理（部署/启动前先 `alembic upgrade head`），
+    # 应用启动只负责播种初始数据（权限/角色/管理员，幂等）。
     async with AsyncSession(engine) as session:
         await init_db(session)
     yield

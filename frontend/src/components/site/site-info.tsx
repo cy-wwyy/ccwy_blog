@@ -1,7 +1,11 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { fetchPublicSiteInfo, type PublicSiteInfo } from "@/lib/api";
+import {
+  fetchPublicSiteInfo,
+  trackView,
+  type PublicSiteInfo,
+} from "@/lib/api";
 
 // 站点信息（站点设置 + 博主公开信息）在前台侧栏与页脚共享，
 // 用 Provider 取一次下发，避免各组件重复请求。
@@ -23,6 +27,7 @@ export function SiteInfoProvider({
     fetchPublicSiteInfo()
       .then((i) => active && setInfo(i))
       .catch(() => {});
+    trackView("site"); // 整站访客量（UV）埋点
     return () => {
       active = false;
     };

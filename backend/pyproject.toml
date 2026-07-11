@@ -18,6 +18,9 @@ dependencies = [
     "aiofiles>=25.1.0",
     "oss2>=2.19.1",
     "pillow>=12.3.0",
+    "alembic>=1.18.5",
+    "pyotp>=2.10.0",
+    "cryptography>=49.0.0",
 ]
 
 [dependency-groups]
@@ -45,6 +48,8 @@ asyncio_mode = "auto"
 
 [tool.ruff]
 target-version = "py314"
+# Alembic 迁移脚本由 autogenerate 生成，沿用其模板风格（Union/Sequence 等），不纳入 lint
+extend-exclude = ["alembic"]
 
 [tool.ruff.lint]
 select = [

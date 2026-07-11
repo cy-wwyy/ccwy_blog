@@ -11,6 +11,9 @@ from app.blog.public_router import router as blog_public_router
 from app.media.admin_router import router as media_admin_router
 from app.settings.admin_router import router as settings_admin_router
 from app.settings.public_router import router as settings_public_router
+from app.stats.admin_router import router as stats_admin_router
+from app.stats.public_router import router as stats_public_router
+from app.tools.router import router as tools_router
 
 api_router = APIRouter()
 api_router.include_router(login_router)
@@ -24,3 +27,6 @@ api_router.include_router(album_admin_router)
 api_router.include_router(album_public_router)
 api_router.include_router(settings_admin_router)
 api_router.include_router(settings_public_router)
+api_router.include_router(stats_admin_router)
+api_router.include_router(stats_public_router)
+api_router.include_router(tools_router)

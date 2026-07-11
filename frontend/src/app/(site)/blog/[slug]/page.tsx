@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Clock } from "lucide-react";
+import { ArrowLeft, Clock, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VditorPreview } from "@/components/editor/vditor-preview";
-import { fetchPublicPost, type PostDetail } from "@/lib/api";
+import { fetchPublicPost, trackView, type PostDetail } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 
 export default function PostDetailPage() {
@@ -24,6 +24,7 @@ export default function PostDetailPage() {
       .catch(() => {
         if (active) setNotFound(true);
       });
+    trackView("post", slug); // 文章浏览量（半小时去重）埋点
     return () => {
       active = false;
     };
@@ -68,6 +69,10 @@ export default function PostDetailPage() {
         <span className="inline-flex items-center gap-1">
           <Clock size={13} />
           {formatDate(post.published_at ?? post.created_at ?? "")}
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Eye size={13} />
+          {post.views} 次浏览
         </span>
         {post.category && <span>{post.category.name}</span>}
         {post.tags.map((t) => (

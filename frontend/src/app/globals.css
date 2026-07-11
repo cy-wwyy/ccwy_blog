@@ -144,15 +144,19 @@
 .orb {
   position: fixed;
   border-radius: 50%;
-  filter: blur(120px);
+  filter: blur(150px);
   pointer-events: none;
   z-index: 0;
   transition: background-color 0.6s ease, opacity 0.6s ease;
 }
-.orb-1 { width: 360px; height: 360px; top: -120px; left: -80px; background: oklch(0.55 0.05 260); opacity: 0.25; }
-.orb-2 { width: 420px; height: 420px; bottom: -120px; right: -60px; background: oklch(0.5 0.04 270); opacity: 0.2; }
-.orb-3 { width: 280px; height: 280px; top: 50%; left: 50%; transform: translate(-50%, -50%); background: oklch(0.6 0.04 250); opacity: 0.2; }
-.dark .orb { opacity: 0.12; }
+/* 亮色：左上淡蓝、左下淡紫、中间取两者融合色相 */
+.orb-1 { width: 420px; height: 420px; top: -120px; left: -100px; background: oklch(0.72 0.12 250); opacity: 0.55; }
+.orb-2 { width: 480px; height: 480px; bottom: -140px; right: -80px; background: oklch(0.70 0.13 295); opacity: 0.5; }
+.orb-3 { width: 340px; height: 340px; top: 50%; left: 50%; transform: translate(-50%, -50%); background: oklch(0.71 0.12 272); opacity: 0.42; }
+/* 暗色：同色相提亮 + 提饱和，作为背景辉光 */
+.dark .orb-1 { background: oklch(0.65 0.15 250); opacity: 0.42; }
+.dark .orb-2 { background: oklch(0.62 0.16 295); opacity: 0.4; }
+.dark .orb-3 { background: oklch(0.63 0.15 272); opacity: 0.36; }
 
 /* ── 毛玻璃：顶栏 / 内容区 / 侧栏 ── */
 .theme-topbar,

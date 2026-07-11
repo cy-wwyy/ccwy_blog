@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   fetchPublicAlbum,
+  trackView,
   type PublicAlbumView,
   type PublicAlbumPhoto,
 } from "@/lib/api";
@@ -49,6 +50,7 @@ export default function AlbumDetailPage() {
       .catch(() => {
         if (active) setNotFound(true);
       });
+    trackView("album", slug); // 相册浏览量（半小时去重）埋点
     return () => {
       active = false;
     };
@@ -83,6 +85,10 @@ export default function AlbumDetailPage() {
             <h1 className="truncate text-sm font-semibold">{album.title}</h1>
             <span className="shrink-0 text-xs text-muted-foreground">
               {album.photos.length} 张
+            </span>
+            <span className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+              <Eye size={13} />
+              {album.views}
             </span>
           </>
         )}

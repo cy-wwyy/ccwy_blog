@@ -52,10 +52,27 @@ class Settings(BaseSettings):
     OSS_ACCESS_KEY: str = ""
     OSS_ACCESS_SECRET: str = ""
 
+    # ── 个人工具：GitHub 2FA (TOTP) 密钥（base32）──
+    # 明文密钥（方便但落盘明文）；二选一，优先用加密版
+    TOTP_SECRET: str = ""
+    # 加密密文（口令调用时手输解密，明文不落盘，推荐）
+    TOTP_SECRET_ENC: str = ""
+
     @computed_field
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
         return f"sqlite+aiosqlite:///{self.SQLITE_DB}"
+
+    @computed_field
+    @property
+    def MIGRATION_DATABASE_URI(self) -> str:
+        """Alembic 迁移用同步驱动（异步驱动无法在迁移里跑 DDL）。
+        SQLite: 去掉 +aiosqlite；PostgreSQL: +asyncpg → +psycopg。"""
+        return (
+            self.SQLALCHEMY_DATABASE_URI.replace("+aiosqlite", "").replace(
+                "+asyncpg", "+psycopg"
+            )
+        )
 
     @computed_field
     @property

@@ -107,6 +107,7 @@ export interface PostPublic {
   published_at: string | null;
   created_at: string | null;
   updated_at: string | null;
+  views: number;
 }
 
 export interface PostsListResponse {
@@ -535,6 +536,7 @@ export interface PublicAlbumCard {
   description: string | null;
   cover_url: string | null;
   photo_count: number;
+  views: number;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -635,5 +637,74 @@ export interface PublicSiteInfo extends SiteSettings {
 
 export async function fetchPublicSiteInfo(): Promise<PublicSiteInfo> {
   return request<PublicSiteInfo>("/site-settings");
+}
+
+// ── Stats（访问统计）────────────────────────────────
+
+export type TrackKind = "site" | "post" | "album";
+
+/** 埋点上报（fire-and-forget）：后端半小时内同一人同一目标只计一次，失败静默。 */
+export function trackView(kind: TrackKind, slug?: string): void {
+  fetch(`${API_BASE}/track`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kind, slug }),
+    keepalive: true,
+  }).catch(() => {});
+}
+
+export interface StatsOverview {
+  visitors_today: number;
+  visitors_total: number;
+}
+
+export interface PostViewStat {
+  id: string;
+  title: string;
+  slug: string;
+  views: number;
+}
+
+export async function fetchStatsOverview(
+  token: string
+): Promise<StatsOverview> {
+  return request<StatsOverview>("/admin/stats/overview", {
+    headers: authHeaders(token),
+  });
+}
+
+/** 公开：整站访客量（今日/累计），供前台右栏展示。 */
+export async function fetchSiteStats(): Promise<StatsOverview> {
+  return request<StatsOverview>("/site-stats");
+}
+
+// ── Tools（个人工具：2FA 验证码）─────────────────────
+
+export interface TotpCode {
+  code: string;
+  expires_in: number;
+  period: number;
+}
+
+export async function fetchTotp(
+  token: string,
+  body: { passphrase?: string; secret?: string }
+): Promise<TotpCode> {
+  return request<TotpCode>("/admin/tools/totp", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function fetchPostStats(
+  token: string,
+  limit = 10
+): Promise<PostViewStat[]> {
+  const r = await request<{ data: PostViewStat[] }>(
+    `/admin/stats/posts?limit=${limit}`,
+    { headers: authHeaders(token) }
+  );
+  return r.data;
 }
 

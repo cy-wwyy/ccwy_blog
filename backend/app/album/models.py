@@ -105,6 +105,7 @@ class AlbumPublic(AlbumBase):
     id: str
     cover_url: str | None = None  # 封面 media 的 url，router 填充
     photo_count: int = 0
+    views: int = 0  # 浏览量（半小时去重），由 stats 聚合填充
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -135,6 +136,7 @@ class AlbumCard(SQLModel):
     description: str | None = None
     cover_url: str | None = None
     photo_count: int = 0
+    views: int = 0
     created_at: datetime | None = None
     updated_at: datetime | None = None
 

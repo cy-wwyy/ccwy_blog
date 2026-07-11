@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Clock } from "lucide-react";
+import { Clock, Eye } from "lucide-react";
 import { CardContainer, CardBody, CardItem } from "@/components/ui/3d-card";
 import { formatDate, cn } from "@/lib/utils";
 import type { PostPublic } from "@/lib/api";
@@ -38,6 +38,10 @@ export function PostCard({ post, categoryName }: PostCardProps) {
                 <span className="flex items-center gap-1">
                   <Clock size={14} />
                   {formatDate(post.published_at ?? post.created_at ?? "")}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Eye size={14} />
+                  {post.views}
                 </span>
                 {categoryName && <span>{categoryName}</span>}
               </div>

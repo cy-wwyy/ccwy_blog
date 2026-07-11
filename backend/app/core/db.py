@@ -29,6 +29,7 @@ import app.album.models  # noqa: E402, F401
 import app.blog.models  # noqa: E402, F401
 import app.core.models  # noqa: E402, F401
 import app.settings.models  # noqa: E402, F401
+import app.stats.models  # noqa: E402, F401
 
 
 async def create_db_and_tables() -> None:

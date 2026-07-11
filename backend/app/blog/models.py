@@ -190,6 +190,7 @@ class PostPublic(SQLModel):
     published_at: datetime | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    views: int = 0  # 浏览量（半小时去重），由 stats 聚合填充
 
 
 class PostDetail(PostPublic):

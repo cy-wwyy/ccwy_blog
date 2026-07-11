@@ -44,6 +44,7 @@ import {
   ChevronsUpDown,
   ChevronRight,
   Settings,
+  Wrench,
 } from "lucide-react";
 
 const navMain = [
@@ -71,6 +72,11 @@ const navMain = [
       { title: "博主设置", url: "/admin/settings/profile" },
       { title: "网页设置", url: "/admin/settings/site" },
     ],
+  },
+  {
+    title: "工具",
+    icon: Wrench,
+    items: [{ title: "2FA 验证码", url: "/admin/tools/totp" }],
   },
 ];
 
