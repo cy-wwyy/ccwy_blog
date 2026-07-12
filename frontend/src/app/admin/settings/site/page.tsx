@@ -100,22 +100,24 @@ export default function SiteSettingsPage() {
         <h1 className="text-lg font-semibold">网页设置</h1>
       </div>
 
-      <Card className="max-w-2xl">
-        <CardHeader>
-          <CardTitle>站点信息</CardTitle>
-          <CardDescription>
-            网站标题、副标题及页脚等前台展示信息。
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-20 w-full" />
-            </div>
-          ) : (
-            <form id="site-form" onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      {loading ? (
+        <Card className="max-w-2xl">
+          <CardContent className="space-y-4 py-6">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-20 w-full" />
+          </CardContent>
+        </Card>
+      ) : (
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <Card className="max-w-2xl">
+            <CardHeader>
+              <CardTitle>站点信息</CardTitle>
+              <CardDescription>
+                网站标题、副标题及页脚等前台展示信息。
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="site_title">网站标题</Label>
                 <Input
@@ -158,27 +160,17 @@ export default function SiteSettingsPage() {
                   placeholder="京ICP备00000000号"
                 />
               </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      <Card className="max-w-2xl">
-        <CardHeader>
-          <CardTitle>AI 设置</CardTitle>
-          <CardDescription>
-            配置大模型用于自动生成 slug 等功能。支持 OpenAI 兼容 API（Ollama、vLLM、国内代理等）。
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-9 w-full" />
-            </div>
-          ) : (
-            <form id="ai-form" onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <Card className="max-w-2xl">
+            <CardHeader>
+              <CardTitle>AI 设置</CardTitle>
+              <CardDescription>
+                配置大模型用于自动生成 slug 等功能。支持 OpenAI 兼容 API（Ollama、vLLM、国内代理等）。
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>启用 AI</Label>
@@ -251,10 +243,10 @@ export default function SiteSettingsPage() {
                   保存
                 </Button>
               </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </form>
+      )}
     </div>
   );
 }
