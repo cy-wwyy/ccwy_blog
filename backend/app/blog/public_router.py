@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException, Query
+from sqlmodel import select
 
 from app.blog import crud
-from app.blog.helpers import category_to_public, post_to_detail, post_to_public
-from app.blog.models import CategoryPublic, PostDetail, PostsPublic
+from app.blog.helpers import category_to_public, post_to_detail, post_to_public, tag_to_public
+from app.blog.models import CategoryPublic, PostDetail, PostsPublic, Tag, TagPublic
 from app.core.deps import SessionDep
 from app.stats import crud as stats_crud
 
@@ -16,6 +17,13 @@ posts_router = APIRouter(prefix="/posts", tags=["posts"])
 async def list_categories(session: SessionDep) -> list[CategoryPublic]:
     cats = await crud.list_categories(session=session)
     return [category_to_public(c) for c in cats]
+
+
+@router.get("/tags", response_model=list[TagPublic])
+async def list_tags_public(session: SessionDep) -> list[TagPublic]:
+    """公开：获取所有标签（供前台标签云等展示）。"""
+    result = (await session.exec(select(Tag).order_by(Tag.name))).all()
+    return [tag_to_public(t) for t in result]
 
 # ── Posts ──────────────────────────────────────────────
 

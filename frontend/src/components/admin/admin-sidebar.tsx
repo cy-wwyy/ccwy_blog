@@ -25,6 +25,7 @@ import {
 import {
   Avatar,
   AvatarFallback,
+  AvatarImage,
 } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -174,6 +175,7 @@ export function AdminSidebar() {
                 }
               >
                 <Avatar className="size-6 rounded-lg">
+                  {user?.avatar && <AvatarImage src={user.avatar} alt={user.username} />}
                   <AvatarFallback className="rounded-lg text-xs">
                     {user?.username?.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
@@ -196,6 +198,7 @@ export function AdminSidebar() {
                   <DropdownMenuLabel className="p-0 font-normal">
                     <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                       <Avatar className="size-6 rounded-lg">
+                        {user?.avatar && <AvatarImage src={user.avatar} alt={user.username} />}
                         <AvatarFallback className="rounded-lg text-xs">
                           {user?.username?.slice(0, 2).toUpperCase()}
                         </AvatarFallback>

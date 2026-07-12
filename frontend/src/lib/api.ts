@@ -287,6 +287,10 @@ export async function fetchTags(token: string): Promise<TagPublic[]> {
   return request<TagPublic[]>("/admin/tags", { headers: authHeaders(token) });
 }
 
+export async function fetchPublicTags(): Promise<TagPublic[]> {
+  return request<TagPublic[]>("/tags");
+}
+
 export async function createTag(
   token: string,
   data: TagWritePayload

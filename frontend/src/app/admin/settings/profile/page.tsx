@@ -95,8 +95,10 @@ export default function ProfileSettingsPage() {
     setUploading(true);
     try {
       const res = await uploadMedia(token, file, "avatar");
-      setAvatar(res.url);
-      toast.success("头像已上传，别忘了保存");
+      // 上传成功后自动保存头像 URL，无需再手动点「保存」
+      const saved = await updateProfileSettings(token, { avatar: res.url });
+      setAvatar(saved.avatar);
+      toast.success("头像已更新");
     } catch (err) {
       toast.error(errorMessage(err, "上传失败"));
     } finally {

@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PenLine, Users, ArrowRight, TrendingUp } from "lucide-react";
-import { fetchPublicPosts, fetchSiteStats } from "@/lib/api";
+import { PenLine, Users, ArrowRight, TrendingUp, Tag } from "lucide-react";
+import { fetchPublicPosts, fetchSiteStats, fetchPublicTags } from "@/lib/api";
+import type { TagPublic } from "@/lib/api";
 
 export function SiteRightAside() {
   const [postCount, setPostCount] = useState<number | null>(null);
   const [visitors, setVisitors] = useState<number | null>(null);
+  const [tags, setTags] = useState<TagPublic[] | null>(null);
 
   useEffect(() => {
     fetchPublicPosts({ limit: 1 })
@@ -17,6 +19,9 @@ export function SiteRightAside() {
     fetchSiteStats()
       .then((s) => setVisitors(s.visitors_total))
       .catch(() => setVisitors(0));
+    fetchPublicTags()
+      .then(setTags)
+      .catch(() => setTags([]));
   }, []);
 
   return (
@@ -52,15 +57,34 @@ export function SiteRightAside() {
         </div>
       </div>
 
-      {/* 标签云 — 占位 */}
-      <div>
-        <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">标签</h3>
-        <div className="flex flex-wrap gap-1.5">
-          <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">技术</span>
-          <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">生活</span>
-          <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">编程</span>
+      {/* 标签云 */}
+      {tags !== null && tags.length > 0 && (
+        <div>
+          <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">标签</h3>
+          <div className="flex flex-wrap gap-1.5">
+            {tags.map((tag) => (
+              <Link
+                key={tag.id}
+                href={`/blog?tag=${encodeURIComponent(tag.slug)}`}
+                className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+              >
+                {tag.name}
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+      {tags !== null && tags.length === 0 && (
+        <div>
+          <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">标签</h3>
+          <div className="flex flex-wrap gap-1.5">
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+              <Tag size={10} className="inline mr-0.5" />
+              暂无标签
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* CTA */}
       <Link
