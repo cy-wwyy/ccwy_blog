@@ -14,40 +14,29 @@ _VID_COOKIE = "vid"
 _VID_MAX_AGE = 60 * 60 * 24 * 365  # 一年
 
 
-def _client_ip(request: Request) -> str:
-    # 反代后取 X-Forwarded-For 首个地址，否则取直连地址
-    xff = request.headers.get("x-forwarded-for", "")
-    if xff:
-        return xff.split(",")[0].strip()
-    return request.client.host if request.client else ""
-
-
 @router.post("/track", status_code=204)
 async def track(
     session: SessionDep, data: TrackIn, request: Request
 ) -> Response:
     """前台埋点：记录一次访问。半小时内同一访客同一目标只计一次。
 
-    访客识别优先用 cookie（跨网络/跨天稳定），无 cookie 时兜底用 IP+UA，
-    并下发 cookie 供后续请求使用。
+    访客识别统一使用 cookie vid（跨网络/跨天稳定），
+    首次访问自动生成并下发。
     """
     resp = Response(status_code=204)
     vid = request.cookies.get(_VID_COOKIE)
-    if vid:
-        vkey = crud.visitor_key_cookie(vid)
-    else:
-        vkey = crud.visitor_key(
-            _client_ip(request), request.headers.get("user-agent", "")
-        )
+    if not vid:
+        vid = generate_ulid()
         resp.set_cookie(
             _VID_COOKIE,
-            generate_ulid(),
+            vid,
             max_age=_VID_MAX_AGE,
             httponly=True,
             samesite="lax",
             secure=settings.ENVIRONMENT != "local",
             path="/",
         )
+    vkey = crud.visitor_key_cookie(vid)
 
     post_id: str | None = None
     album_id: str | None = None
