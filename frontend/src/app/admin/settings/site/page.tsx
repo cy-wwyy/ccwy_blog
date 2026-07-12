@@ -50,6 +50,7 @@ export default function SiteSettingsPage() {
     handleSubmit,
     reset,
     control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -185,17 +186,9 @@ export default function SiteSettingsPage() {
                     关闭后 slug 生成回退为手动填写
                   </p>
                 </div>
-                <input
-                  type="hidden"
-                  {...register("ai_enabled")}
-                />
                 <Switch
                   checked={aiEnabled === "true"}
-                  onCheckedChange={(v) => {
-                    register("ai_enabled").onChange({
-                      target: { name: "ai_enabled", value: v ? "true" : "" },
-                    });
-                  }}
+                  onCheckedChange={(v) => setValue("ai_enabled", v ? "true" : "")}
                 />
               </div>
 
