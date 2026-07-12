@@ -19,7 +19,16 @@ class SiteSetting(SQLModel, table=True):
 
 
 # 站点设置已知键与默认值（site_title 默认取 PROJECT_NAME，在 crud 里注入）
-SITE_KEYS: tuple[str, ...] = ("site_title", "site_subtitle", "footer_text", "icp")
+SITE_KEYS: tuple[str, ...] = (
+    "site_title",
+    "site_subtitle",
+    "footer_text",
+    "icp",
+    "ai_enabled",
+    "ai_api_base",
+    "ai_api_key",
+    "ai_model",
+)
 
 
 # ── 博主设置 Schemas（读写 User 表）───────────────────
@@ -50,6 +59,10 @@ class SiteSettingsRead(SQLModel):
     site_subtitle: str = ""
     footer_text: str = ""
     icp: str = ""
+    ai_enabled: str = ""
+    ai_api_base: str = ""
+    ai_api_key: str = ""
+    ai_model: str = ""
 
 
 class SiteSettingsUpdate(SQLModel):
@@ -57,6 +70,10 @@ class SiteSettingsUpdate(SQLModel):
     site_subtitle: str | None = Field(default=None, max_length=256)
     footer_text: str | None = Field(default=None, max_length=256)
     icp: str | None = Field(default=None, max_length=128)
+    ai_enabled: str | None = Field(default=None, max_length=16)
+    ai_api_base: str | None = Field(default=None, max_length=512)
+    ai_api_key: str | None = Field(default=None, max_length=256)
+    ai_model: str | None = Field(default=None, max_length=128)
 
 
 # ── 公开视图（前台消费：站点信息 + 博主公开信息）──────────

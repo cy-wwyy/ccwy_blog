@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ import {
 import { ArrowLeft } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { CoverUpload } from "@/components/admin/cover-upload";
+import { SlugInput, useAutoFillSlug } from "@/components/admin/slug-input";
+import { useAuth } from "@/hooks/use-auth";
 import { POST_STATUS, SLUG_PATTERN, type PostStatus } from "@/lib/constants";
 import type { CategoryPublic, TagPublic } from "@/lib/api";
 
@@ -84,6 +86,9 @@ export function PostForm({
   onBack,
   onSave,
 }: PostFormProps) {
+  const { token } = useAuth();
+  const maybeFillSlug = useAutoFillSlug(token);
+
   const {
     register,
     handleSubmit,
@@ -102,6 +107,8 @@ export function PostForm({
     },
   });
 
+  const title = useWatch({ control, name: "title" });
+
   const categoryItems = useMemo(
     () => [
       { label: "无", value: "" },
@@ -118,7 +125,10 @@ export function PostForm({
 
   // 两个提交入口共用校验；校验通过后按对应状态回调
   const submit = (status: PostStatus) =>
-    handleSubmit((values) => onSave(values, status));
+    handleSubmit(async (values) => {
+      const slug = await maybeFillSlug(values.title, values.slug);
+      onSave({ ...values, slug }, status);
+    });
 
   return (
     <div className="flex flex-1 flex-col space-y-2">
@@ -157,15 +167,18 @@ export function PostForm({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="slug">slug</Label>
-            <Input
-              id="slug"
-              {...register("slug")}
-              placeholder="url-friendly-slug"
-              aria-invalid={!!errors.slug}
+            <Controller
+              control={control}
+              name="slug"
+              render={({ field }) => (
+                <SlugInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  title={title}
+                  error={errors.slug?.message}
+                />
+              )}
             />
-            {errors.slug && (
-              <p className="text-sm text-destructive">{errors.slug.message}</p>
-            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="excerpt">摘要</Label>

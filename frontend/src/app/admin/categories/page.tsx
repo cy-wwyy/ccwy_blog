@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -33,6 +33,7 @@ import { Plus, Edit, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminTable } from "@/components/admin/admin-table";
+import { SlugInput, useAutoFillSlug } from "@/components/admin/slug-input";
 import { PAGE_SIZE, SLUG_PATTERN } from "@/lib/constants";
 import {
   fetchCategories,
@@ -74,6 +75,7 @@ function errorMessage(err: unknown, fallback: string): string {
 
 export default function CategoriesPage() {
   const { token } = useAuth();
+  const maybeFillSlug = useAutoFillSlug(token);
   const [tab, setTab] = useState("categories");
   const [categories, setCategories] = useState<CategoryPublic[]>([]);
   const [tags, setTags] = useState<TagPublic[]>([]);
@@ -100,6 +102,8 @@ export default function CategoriesPage() {
     resolver: zodResolver(itemSchema),
     defaultValues: EMPTY_FORM,
   });
+
+  const itemName = useWatch({ control, name: "name" });
 
   useEffect(() => {
     if (!token) return;
@@ -170,11 +174,12 @@ export default function CategoriesPage() {
 
   const onSubmit = async (values: ItemFormValues) => {
     if (!token) return;
+    const slug = await maybeFillSlug(values.name, values.slug);
     try {
       if (isCat) {
         const payload = {
           name: values.name,
-          slug: values.slug,
+          slug,
           description: values.description || null,
           parent_id: values.parentId || null,
         };
@@ -188,7 +193,7 @@ export default function CategoriesPage() {
           setCategories((prev) => [...prev, created]);
         }
       } else {
-        const payload = { name: values.name, slug: values.slug };
+        const payload = { name: values.name, slug };
         if (editing) {
           const updated = await updateTag(token, editing.id, payload);
           setTags((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
@@ -344,10 +349,18 @@ export default function CategoriesPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="slug">slug</Label>
-                <Input id="slug" {...register("slug")} placeholder="url-friendly-slug" aria-invalid={!!errors.slug} />
-                {errors.slug && (
-                  <p className="text-sm text-destructive">{errors.slug.message}</p>
-                )}
+                <Controller
+                  control={control}
+                  name="slug"
+                  render={({ field }) => (
+                    <SlugInput
+                      value={field.value}
+                      onChange={field.onChange}
+                      title={itemName}
+                      error={errors.slug?.message}
+                    />
+                  )}
+                />
               </div>
               {isCat && (
                 <>

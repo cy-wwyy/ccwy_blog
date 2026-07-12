@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Card,
   CardContent,
@@ -26,6 +27,10 @@ const schema = z.object({
   site_subtitle: z.string(),
   footer_text: z.string(),
   icp: z.string(),
+  ai_enabled: z.string(),
+  ai_api_base: z.string(),
+  ai_api_key: z.string(),
+  ai_model: z.string(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -42,6 +47,7 @@ export default function SiteSettingsPage() {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -50,8 +56,14 @@ export default function SiteSettingsPage() {
       site_subtitle: "",
       footer_text: "",
       icp: "",
+      ai_enabled: "",
+      ai_api_base: "",
+      ai_api_key: "",
+      ai_model: "",
     },
   });
+
+  const aiEnabled = useWatch({ control, name: "ai_enabled" });
 
   useEffect(() => {
     if (!token) return;
@@ -98,7 +110,7 @@ export default function SiteSettingsPage() {
               <Skeleton className="h-20 w-full" />
             </div>
           ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <form id="site-form" onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="site_title">网站标题</Label>
                 <Input
@@ -139,6 +151,75 @@ export default function SiteSettingsPage() {
                   id="icp"
                   {...register("icp")}
                   placeholder="京ICP备00000000号"
+                />
+              </div>
+            </form>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-2xl">
+        <CardHeader>
+          <CardTitle>AI 设置</CardTitle>
+          <CardDescription>
+            配置大模型用于自动生成 slug 等功能。支持 OpenAI 兼容 API（Ollama、vLLM、国内代理等）。
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+          ) : (
+            <form id="ai-form" onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>启用 AI</Label>
+                  <p className="text-xs text-muted-foreground">
+                    关闭后 slug 生成回退为手动填写
+                  </p>
+                </div>
+                <input
+                  type="hidden"
+                  {...register("ai_enabled")}
+                />
+                <Switch
+                  checked={aiEnabled === "true"}
+                  onCheckedChange={(v) => {
+                    register("ai_enabled").onChange({
+                      target: { name: "ai_enabled", value: v ? "true" : "" },
+                    });
+                  }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ai_api_base">API 地址</Label>
+                <Input
+                  id="ai_api_base"
+                  {...register("ai_api_base")}
+                  placeholder="https://api.openai.com/v1"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ai_api_key">API Key</Label>
+                <Input
+                  id="ai_api_key"
+                  type="password"
+                  {...register("ai_api_key")}
+                  placeholder="sk-••••••••"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ai_model">模型</Label>
+                <Input
+                  id="ai_model"
+                  {...register("ai_model")}
+                  placeholder="gpt-4o-mini"
                 />
               </div>
 

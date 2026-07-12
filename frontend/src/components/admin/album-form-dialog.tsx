@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SlugInput, useAutoFillSlug } from "@/components/admin/slug-input";
 import { SLUG_PATTERN } from "@/lib/constants";
 import {
   createAlbum,
@@ -69,6 +70,7 @@ export function AlbumFormDialog({
   onSaved,
 }: AlbumFormDialogProps) {
   const { token } = useAuth();
+  const maybeFillSlug = useAutoFillSlug(token);
   const {
     register,
     handleSubmit,
@@ -79,6 +81,8 @@ export function AlbumFormDialog({
     resolver: zodResolver(albumSchema),
     defaultValues: { title: "", slug: "", description: "", isPublic: "true" },
   });
+
+  const title = useWatch({ control, name: "title" });
 
   // 打开时按当前 album 填充表单
   useEffect(() => {
@@ -93,9 +97,10 @@ export function AlbumFormDialog({
 
   const onSubmit = async (values: AlbumFormValues) => {
     if (!token) return;
+    const slug = await maybeFillSlug(values.title, values.slug);
     const payload = {
       title: values.title,
-      slug: values.slug,
+      slug,
       description: values.description || null,
       is_public: values.isPublic === "true",
     };
@@ -138,17 +143,18 @@ export function AlbumFormDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="album-slug">slug</Label>
-              <Input
-                id="album-slug"
-                {...register("slug")}
-                placeholder="url-friendly-slug"
-                aria-invalid={!!errors.slug}
+              <Controller
+                control={control}
+                name="slug"
+                render={({ field }) => (
+                  <SlugInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    title={title}
+                    error={errors.slug?.message}
+                  />
+                )}
               />
-              {errors.slug && (
-                <p className="text-sm text-destructive">
-                  {errors.slug.message}
-                </p>
-              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="album-desc">描述（可选）</Label>

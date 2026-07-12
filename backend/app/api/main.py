@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.album.admin_router import router as album_admin_router
 from app.album.public_router import router as album_public_router
+from app.ai.router import router as ai_router
 from app.api.login import router as login_router
 from app.blog.admin_categories import router as categories_admin_router
 from app.blog.admin_router import router as blog_admin_router
@@ -30,3 +31,4 @@ api_router.include_router(settings_public_router)
 api_router.include_router(stats_admin_router)
 api_router.include_router(stats_public_router)
 api_router.include_router(tools_router)
+api_router.include_router(ai_router)

@@ -587,6 +587,10 @@ export interface SiteSettings {
   site_subtitle: string;
   footer_text: string;
   icp: string;
+  ai_enabled: string;
+  ai_api_base: string;
+  ai_api_key: string;
+  ai_model: string;
 }
 
 export async function getProfileSettings(
@@ -698,6 +702,20 @@ export async function fetchTotp(
     method: "POST",
     headers: authHeaders(token),
     body: JSON.stringify(body),
+  });
+}
+
+// ── AI ──────────────────────────────────────────────
+
+export async function generateSlug(
+  token: string,
+  title: string,
+  lang = "zh"
+): Promise<{ slug: string }> {
+  return request<{ slug: string }>("/ai/generate-slug", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ title, lang }),
   });
 }
 

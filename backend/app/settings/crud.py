@@ -15,6 +15,10 @@ def site_defaults() -> dict[str, str]:
         "site_subtitle": "",
         "footer_text": "",
         "icp": "",
+        "ai_enabled": "",
+        "ai_api_base": "https://api.openai.com/v1",
+        "ai_api_key": "",
+        "ai_model": "gpt-4o-mini",
     }
 
 
