@@ -19,6 +19,8 @@ def site_defaults() -> dict[str, str]:
         "ai_api_base": "https://api.openai.com/v1",
         "ai_api_key": "",
         "ai_model": "gpt-4o-mini",
+        "ai_reasoning_effort": "",
+        "ai_extra_body": "",
     }
 
 

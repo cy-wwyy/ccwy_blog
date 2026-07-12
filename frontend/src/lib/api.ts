@@ -591,6 +591,8 @@ export interface SiteSettings {
   ai_api_base: string;
   ai_api_key: string;
   ai_model: string;
+  ai_reasoning_effort: string;
+  ai_extra_body: string;
 }
 
 export async function getProfileSettings(

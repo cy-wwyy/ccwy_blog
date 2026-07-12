@@ -31,6 +31,8 @@ const schema = z.object({
   ai_api_base: z.string(),
   ai_api_key: z.string(),
   ai_model: z.string(),
+  ai_reasoning_effort: z.string(),
+  ai_extra_body: z.string(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -60,6 +62,8 @@ export default function SiteSettingsPage() {
       ai_api_base: "",
       ai_api_key: "",
       ai_model: "",
+      ai_reasoning_effort: "",
+      ai_extra_body: "",
     },
   });
 
@@ -221,6 +225,32 @@ export default function SiteSettingsPage() {
                   {...register("ai_model")}
                   placeholder="gpt-4o-mini"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ai_reasoning_effort">思考强度</Label>
+                <Input
+                  id="ai_reasoning_effort"
+                  {...register("ai_reasoning_effort")}
+                  placeholder="留空为默认；设为 low / medium / high"
+                />
+                <p className="text-xs text-muted-foreground">
+                  OpenAI reasoning_effort 参数，留空不传。slug 场景建议留空或设为 low
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ai_extra_body">额外参数 (JSON)</Label>
+                <Textarea
+                  id="ai_extra_body"
+                  {...register("ai_extra_body")}
+                  rows={3}
+                  placeholder='{"thinking": {"type": "disabled"}}'
+                  className="font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  透传 extra_body。DeepSeek 关闭思考：<code>{'{"thinking": {"type": "disabled"}}'}</code>
+                </p>
               </div>
 
               <div className="flex justify-end">

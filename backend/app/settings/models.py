@@ -28,6 +28,8 @@ SITE_KEYS: tuple[str, ...] = (
     "ai_api_base",
     "ai_api_key",
     "ai_model",
+    "ai_reasoning_effort",
+    "ai_extra_body",
 )
 
 
@@ -63,6 +65,8 @@ class SiteSettingsRead(SQLModel):
     ai_api_base: str = ""
     ai_api_key: str = ""
     ai_model: str = ""
+    ai_reasoning_effort: str = ""
+    ai_extra_body: str = ""
 
 
 class SiteSettingsUpdate(SQLModel):
@@ -74,6 +78,8 @@ class SiteSettingsUpdate(SQLModel):
     ai_api_base: str | None = Field(default=None, max_length=512)
     ai_api_key: str | None = Field(default=None, max_length=256)
     ai_model: str | None = Field(default=None, max_length=128)
+    ai_reasoning_effort: str | None = Field(default=None, max_length=16)
+    ai_extra_body: str | None = Field(default=None, max_length=1024)
 
 
 # ── 公开视图（前台消费：站点信息 + 博主公开信息）──────────

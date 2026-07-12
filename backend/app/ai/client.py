@@ -5,8 +5,8 @@
 独立于 .env 的 Settings，方便运行时热修改。
 """
 
+import json
 import logging
-from typing import cast
 
 from openai import AsyncOpenAI
 
@@ -29,6 +29,37 @@ async def _client() -> AsyncOpenAI | None:
         return None
     base = config.get("ai_api_base", "") or _DEFAULT_BASE
     return AsyncOpenAI(base_url=base, api_key=api_key, timeout=_REQUEST_TIMEOUT)
+
+
+def _parse_extra_body(raw: str) -> dict | None:
+    """解析 JSON 字符串为 extra_body dict；非法 JSON 记日志并忽略。"""
+    if not raw.strip():
+        return None
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, dict):
+            return parsed
+        logger.warning("ai_extra_body 不是 JSON 对象，已忽略")
+        return None
+    except json.JSONDecodeError:
+        logger.warning("ai_extra_body 不是合法 JSON，已忽略")
+        return None
+
+
+async def _build_kwargs() -> dict:
+    """从 SiteSetting 构建 chat.completions.create 的额外参数。"""
+    config = await get_site_settings()
+    kwargs: dict = {}
+
+    effort = config.get("ai_reasoning_effort", "").strip()
+    if effort:
+        kwargs["reasoning_effort"] = effort
+
+    extra = _parse_extra_body(config.get("ai_extra_body", ""))
+    if extra:
+        kwargs["extra_body"] = extra
+
+    return kwargs
 
 
 async def generate_slug(*, title: str, lang: str = "zh") -> str:
@@ -59,13 +90,13 @@ async def generate_slug(*, title: str, lang: str = "zh") -> str:
             messages=[{"role": "user", "content": prompt}],
             max_tokens=50,
             temperature=0.3,
+            **await _build_kwargs(),
         )
     except Exception as e:
         logger.warning("LLM slug generation failed: %s", e)
         raise RuntimeError(f"AI 调用失败: {e}") from e
 
     raw = response.choices[0].message.content or ""
-    # 前端已做格式校验，后端再做一次兜底过滤
     slug = _sanitize(raw.strip())
     if not slug:
         raise RuntimeError("AI 返回了无效的 slug，请手动填写")
