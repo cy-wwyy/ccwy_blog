@@ -74,7 +74,10 @@ export default function SiteSettingsPage() {
     if (!token) return;
     let active = true;
     getSiteSettings(token)
-      .then((s) => active && reset(s))
+      .then((s) => {
+        if (!active) return;
+        reset(s);
+      })
       .catch((e) => active && toast.error(errorMessage(e, "加载失败")))
       .finally(() => active && setLoading(false));
     return () => {
@@ -86,7 +89,8 @@ export default function SiteSettingsPage() {
     if (!token) return;
     try {
       const saved = await updateSiteSettings(token, values);
-      reset(saved);
+      // values 兜底，saved 覆盖：防止服务器未返回某字段时被 reset 清空
+      reset({ ...values, ...saved });
       toast.success("已保存");
     } catch (e) {
       toast.error(errorMessage(e, "保存失败"));

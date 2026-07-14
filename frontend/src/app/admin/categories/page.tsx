@@ -54,7 +54,6 @@ const itemSchema = z.object({
   name: z.string().min(1, "请输入名称"),
   slug: z
     .string()
-    .min(1, "请输入 slug")
     .regex(SLUG_PATTERN, "slug 只能包含小写字母、数字和连字符"),
   description: z.string(),
   parentId: z.string(),
@@ -97,6 +96,7 @@ export default function CategoriesPage() {
     handleSubmit,
     control,
     reset,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<ItemFormValues>({
     resolver: zodResolver(itemSchema),
@@ -175,6 +175,10 @@ export default function CategoriesPage() {
   const onSubmit = async (values: ItemFormValues) => {
     if (!token) return;
     const slug = await maybeFillSlug(values.name, values.slug);
+    if (!slug.trim()) {
+      setError("slug", { message: "请输入 slug 或点击 ✨ 自动生成" });
+      return;
+    }
     try {
       if (isCat) {
         const payload = {

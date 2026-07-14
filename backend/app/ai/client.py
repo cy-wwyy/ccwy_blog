@@ -9,6 +9,7 @@ import json
 import logging
 
 from openai import AsyncOpenAI
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.settings.crud import get_site_settings
 
@@ -20,9 +21,9 @@ _DEFAULT_MODEL = "gpt-4o-mini"
 _REQUEST_TIMEOUT = 5.0  # slug 是短文本，5 秒足够
 
 
-async def _client() -> AsyncOpenAI | None:
+async def _client(session: AsyncSession) -> AsyncOpenAI | None:
     """按当前 SiteSetting 构建客户端；未启用或无 key 时返回 None。"""
-    config = await get_site_settings()
+    config = await get_site_settings(session=session)
     enabled = config.get("ai_enabled", "")
     api_key = config.get("ai_api_key", "")
     if enabled != "true" or not api_key:
@@ -46,9 +47,9 @@ def _parse_extra_body(raw: str) -> dict | None:
         return None
 
 
-async def _build_kwargs() -> dict:
+async def _build_kwargs(session: AsyncSession) -> dict:
     """从 SiteSetting 构建 chat.completions.create 的额外参数。"""
-    config = await get_site_settings()
+    config = await get_site_settings(session=session)
     kwargs: dict = {}
 
     effort = config.get("ai_reasoning_effort", "").strip()
@@ -62,10 +63,13 @@ async def _build_kwargs() -> dict:
     return kwargs
 
 
-async def generate_slug(*, title: str, lang: str = "zh") -> str:
+async def generate_slug(
+    *, session: AsyncSession, title: str, lang: str = "zh"
+) -> str:
     """根据标题调用 LLM 生成英文 slug。
 
     Args:
+        session: 数据库会话（用于读取 SiteSetting）
         title: 文章/分类/标签/相册的标题
         lang: 标题语言，提示 LLM 是否需要翻译
 
@@ -77,11 +81,12 @@ async def generate_slug(*, title: str, lang: str = "zh") -> str:
     """
     from app.ai.prompts import SLUG_PROMPT
 
-    client = await _client()
+    client = await _client(session)
     if client is None:
         raise RuntimeError("AI 服务未启用或未配置 API Key")
 
-    model = (await get_site_settings()).get("ai_model", "") or _DEFAULT_MODEL
+    config = await get_site_settings(session=session)
+    model = config.get("ai_model", "") or _DEFAULT_MODEL
     prompt = SLUG_PROMPT.format(title=title, lang=lang)
 
     try:
@@ -90,7 +95,7 @@ async def generate_slug(*, title: str, lang: str = "zh") -> str:
             messages=[{"role": "user", "content": prompt}],
             max_tokens=50,
             temperature=0.3,
-            **await _build_kwargs(),
+            **await _build_kwargs(session),
         )
     except Exception as e:
         logger.warning("LLM slug generation failed: %s", e)

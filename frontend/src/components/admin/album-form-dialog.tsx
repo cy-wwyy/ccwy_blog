@@ -38,7 +38,6 @@ const albumSchema = z.object({
   title: z.string().min(1, "请输入标题"),
   slug: z
     .string()
-    .min(1, "请输入 slug")
     .regex(SLUG_PATTERN, "slug 只能包含小写字母、数字和连字符"),
   description: z.string(),
   isPublic: z.string(),
@@ -76,6 +75,7 @@ export function AlbumFormDialog({
     handleSubmit,
     control,
     reset,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<AlbumFormValues>({
     resolver: zodResolver(albumSchema),
@@ -98,6 +98,10 @@ export function AlbumFormDialog({
   const onSubmit = async (values: AlbumFormValues) => {
     if (!token) return;
     const slug = await maybeFillSlug(values.title, values.slug);
+    if (!slug.trim()) {
+      setError("slug", { message: "请输入 slug 或点击 ✨ 自动生成" });
+      return;
+    }
     const payload = {
       title: values.title,
       slug,

@@ -25,9 +25,9 @@ import type { CategoryPublic, TagPublic } from "@/lib/api";
 
 const postSchema = z.object({
   title: z.string().min(1, "请输入标题"),
+  // .min(1) 不在此校验——提交时先由 AI 自动补全，补全失败再提示手动填写
   slug: z
     .string()
-    .min(1, "请输入 slug")
     .regex(SLUG_PATTERN, "slug 只能包含小写字母、数字和连字符"),
   excerpt: z.string(),
   cover: z.string(),
@@ -93,6 +93,7 @@ export function PostForm({
     register,
     handleSubmit,
     control,
+    setError,
     formState: { errors },
   } = useForm<PostFormValues>({
     resolver: zodResolver(postSchema),
@@ -127,6 +128,10 @@ export function PostForm({
   const submit = (status: PostStatus) =>
     handleSubmit(async (values) => {
       const slug = await maybeFillSlug(values.title, values.slug);
+      if (!slug.trim()) {
+        setError("slug", { message: "请输入 slug 或点击 ✨ 自动生成" });
+        return;
+      }
       onSave({ ...values, slug }, status);
     });
 
