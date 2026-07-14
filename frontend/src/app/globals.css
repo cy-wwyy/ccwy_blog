@@ -187,3 +187,19 @@
 .dark .theme-content { background: rgba(20, 18, 30, 0.45); }
 .dark [data-slot="sidebar-inner"] { background: rgba(20, 18, 30, 0.65); }
 
+/* ── Vditor 内容溢出修复 ── */
+/* 根因：vditor-reset pre > code 有 white-space:pre + word-wrap:normal，长行溢出 */
+.vditor-reset pre {
+  overflow: auto;
+}
+.vditor-reset pre > code {
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  word-break: break-all !important;
+}
+/* 根因：vditor-reset table td/th 有 white-space:nowrap，表格溢出 */
+.vditor-reset table td,
+.vditor-reset table th {
+  white-space: normal !important;
+}
+

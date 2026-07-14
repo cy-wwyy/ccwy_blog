@@ -35,7 +35,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             {/* 下方：主内容 + 右栏 */}
             <div className="flex flex-1 overflow-hidden">
               {/* 主内容区 */}
-              <main className="flex-1 overflow-y-auto theme-content">{children}</main>
+              <main className="flex-1 overflow-y-auto overflow-x-hidden theme-content">{children}</main>
 
               {/* 右栏 — 移动端隐藏 */}
               <aside className="hidden lg:block w-[220px] overflow-y-auto shrink-0 theme-content border-l border-border/30">

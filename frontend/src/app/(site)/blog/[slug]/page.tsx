@@ -46,7 +46,7 @@ export default function PostDetailPage() {
 
   if (!post) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-4">
+      <div className="max-w-2xl mx-auto px-4 py-8 space-y-4">
         <Skeleton className="h-8 w-2/3" />
         <Skeleton className="h-4 w-40" />
         <Skeleton className="h-64 w-full" />
@@ -55,7 +55,7 @@ export default function PostDetailPage() {
   }
 
   return (
-    <article className="max-w-3xl mx-auto px-4 py-8">
+    <article className="max-w-2xl mx-auto px-4 py-8">
       <Link
         href="/"
         className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-6"
