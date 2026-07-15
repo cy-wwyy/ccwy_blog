@@ -732,3 +732,230 @@ export async function fetchPostStats(
   return r.data;
 }
 
+// ── Trip（行程）──────────────────────────────────────
+
+export interface TripPublic {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  cover_url: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  is_public: boolean;
+  status: string;
+  point_count: number;
+  total_distance: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface TripPointPublic {
+  id: string;
+  trip_id: string;
+  title: string;
+  description: string | null;
+  point_type: string;
+  location_name: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  arrived_at: string | null;
+  sort_order: number;
+  polyline_to_next: string | null;
+  distance_to_next: number | null;
+  photos: string[];
+  created_at: string | null;
+}
+
+export interface TripDetail extends TripPublic {
+  points: TripPointPublic[];
+}
+
+export interface TripsListResponse {
+  data: TripPublic[];
+  count: number;
+}
+
+export interface TripWritePayload {
+  title: string;
+  slug: string;
+  description?: string | null;
+  cover_media_id?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  is_public?: boolean;
+  status?: string;
+}
+
+export interface TripPointWritePayload {
+  trip_id: string;
+  title: string;
+  description?: string | null;
+  point_type?: string;
+  location_name?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  arrived_at?: string;
+  sort_order?: number;
+  media_ids?: string[];
+}
+
+// ── Admin Trip API ───────────────────────────────────
+
+export async function fetchAdminTrips(
+  token: string,
+  params?: { skip?: number; limit?: number; status?: string; search?: string }
+): Promise<TripsListResponse> {
+  const qs = new URLSearchParams();
+  if (params?.skip != null) qs.set("skip", String(params.skip));
+  if (params?.limit != null) qs.set("limit", String(params.limit));
+  if (params?.status) qs.set("status", params.status);
+  if (params?.search) qs.set("search", params.search);
+  const q = qs.toString();
+  return request<TripsListResponse>(`/admin/trips${q ? "?" + q : ""}`, {
+    headers: authHeaders(token),
+  });
+}
+
+export async function getTrip(token: string, id: string): Promise<TripDetail> {
+  return request<TripDetail>(`/admin/trips/${id}`, {
+    headers: authHeaders(token),
+  });
+}
+
+export async function getTripBySlug(
+  token: string,
+  slug: string
+): Promise<TripDetail> {
+  return request<TripDetail>(
+    `/admin/trips/by-slug/${encodeURIComponent(slug)}`,
+    { headers: authHeaders(token) }
+  );
+}
+
+export async function createTrip(
+  token: string,
+  data: TripWritePayload
+): Promise<TripDetail> {
+  return request<TripDetail>("/admin/trips", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateTrip(
+  token: string,
+  id: string,
+  data: Partial<TripWritePayload>
+): Promise<TripDetail> {
+  return request<TripDetail>(`/admin/trips/${id}`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteTrip(token: string, id: string): Promise<void> {
+  await request<unknown>(`/admin/trips/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+}
+
+// ── Admin TripPoint API ──────────────────────────────
+
+export async function createTripPoint(
+  token: string,
+  tripId: string,
+  data: TripPointWritePayload
+): Promise<TripPointPublic> {
+  return request<TripPointPublic>(`/admin/trips/${tripId}/points`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateTripPoint(
+  token: string,
+  tripId: string,
+  pointId: string,
+  data: Partial<TripPointWritePayload>
+): Promise<TripPointPublic> {
+  return request<TripPointPublic>(
+    `/admin/trips/${tripId}/points/${pointId}`,
+    {
+      method: "PATCH",
+      headers: authHeaders(token),
+      body: JSON.stringify(data),
+    }
+  );
+}
+
+export async function deleteTripPoint(
+  token: string,
+  tripId: string,
+  pointId: string
+): Promise<void> {
+  await request<unknown>(`/admin/trips/${tripId}/points/${pointId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+}
+
+// ── Public Trip API ──────────────────────────────────
+
+export interface TripCard {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  cover_url: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  point_count: number;
+  total_distance: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface TripPointView {
+  id: string;
+  title: string;
+  description: string | null;
+  point_type: string;
+  location_name: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  arrived_at: string | null;
+  sort_order: number;
+  polyline_to_next: string | null;
+  distance_to_next: number | null;
+  photos: string[];
+}
+
+export interface TripView extends TripCard {
+  points: TripPointView[];
+}
+
+export interface TripsViewResponse {
+  data: TripCard[];
+  count: number;
+}
+
+export async function fetchPublicTrips(params?: {
+  skip?: number;
+  limit?: number;
+}): Promise<TripsViewResponse> {
+  const qs = new URLSearchParams();
+  if (params?.skip != null) qs.set("skip", String(params.skip));
+  if (params?.limit != null) qs.set("limit", String(params.limit));
+  const q = qs.toString();
+  return request<TripsViewResponse>(`/trips${q ? "?" + q : ""}`);
+}
+
+export async function fetchPublicTrip(slug: string): Promise<TripView> {
+  return request<TripView>(`/trips/${encodeURIComponent(slug)}`);
+}
+

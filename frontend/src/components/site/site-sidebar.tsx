@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
-import { Home, Images, Info, LayoutGrid, ChevronRight, Camera } from "lucide-react";
+import { Home, Images, Info, LayoutGrid, ChevronRight, Camera, MapPin } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { fetchPublicCategories, type CategoryPublic } from "@/lib/api";
@@ -27,6 +27,7 @@ const FALLBACK_AUTHOR = { name: "CCWY", bio: "记录技术与生活" };
 const navItems = [
   { href: "/", label: "首页", icon: Home },
   { href: "/albums", label: "相册", icon: Camera },
+  { href: "/trips", label: "行程", icon: MapPin },
   { href: "/projects", label: "作品集", icon: Images },
   { href: "/about", label: "关于", icon: Info },
 ];

@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     OSS_ACCESS_KEY: str = ""
     OSS_ACCESS_SECRET: str = ""
 
+    # ── 高德地图 Web API（地理编码 + 路径规划）──
+    AMAP_WEB_KEY: str = ""
+
     # ── 个人工具：GitHub 2FA (TOTP) 密钥（base32）──
     # 明文密钥（方便但落盘明文）；二选一，优先用加密版
     TOTP_SECRET: str = ""

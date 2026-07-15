@@ -12,6 +12,7 @@ import app.blog.models  # noqa: F401
 import app.core.models  # noqa: F401
 import app.settings.models  # noqa: F401
 import app.stats.models  # noqa: F401
+import app.trip.models  # noqa: F401
 from app.core.config import settings
 
 config = context.config

@@ -56,6 +56,7 @@ const navMain = [
     items: [
       { title: "文章", url: "/admin/posts" },
       { title: "分类 / 标签", url: "/admin/categories" },
+      { title: "行程", url: "/admin/trips" },
     ],
   },
   {

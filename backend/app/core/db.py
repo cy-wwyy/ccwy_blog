@@ -30,6 +30,7 @@ import app.blog.models  # noqa: E402, F401
 import app.core.models  # noqa: E402, F401
 import app.settings.models  # noqa: E402, F401
 import app.stats.models  # noqa: E402, F401
+import app.trip.models  # noqa: E402, F401
 
 
 async def create_db_and_tables() -> None:
@@ -58,6 +59,7 @@ async def init_db(session: AsyncSession) -> None:
         "comments:moderate": "管理评论",
         "media:manage": "管理媒体",
         "album:manage": "管理相册",
+        "trip:manage": "管理行程",
         "users:manage": "管理用户",
         "settings:manage": "管理站点设置",
     }

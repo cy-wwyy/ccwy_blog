@@ -15,6 +15,8 @@ from app.settings.public_router import router as settings_public_router
 from app.stats.admin_router import router as stats_admin_router
 from app.stats.public_router import router as stats_public_router
 from app.tools.router import router as tools_router
+from app.trip.admin_router import router as trip_admin_router
+from app.trip.public_router import router as trip_public_router
 
 api_router = APIRouter()
 api_router.include_router(login_router)
@@ -32,3 +34,5 @@ api_router.include_router(stats_admin_router)
 api_router.include_router(stats_public_router)
 api_router.include_router(tools_router)
 api_router.include_router(ai_router)
+api_router.include_router(trip_admin_router)
+api_router.include_router(trip_public_router)
