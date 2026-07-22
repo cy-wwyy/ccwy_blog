@@ -30,6 +30,24 @@ function formatDist(meters: number | null): string {
   return `${meters} m`;
 }
 
+/** 生成标记点的 HTML。isLast 时渲染为 GPS 定位样式（脉冲波纹 + 定位点）。 */
+function buildMarkerHtml(label: number | string, pointType: string, isLast: boolean): string {
+  const meta = POINT_TYPE_META[pointType] ?? POINT_TYPE_META.other;
+
+  if (!isLast) {
+    // 普通编号圆点
+    return `<div style="width:28px;height:28px;border-radius:50%;background:${meta.color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:bold;cursor:pointer;">${label}</div>`;
+  }
+
+  // 末点：GPS 定位样式 — 脉冲外圈 + 实心定位点
+  return `
+    <div style="position:relative;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+      <div style="position:absolute;width:36px;height:36px;border-radius:50%;background:${meta.color};opacity:0.25;animation:gps-pulse 2s ease-out infinite;"></div>
+      <div style="position:absolute;width:28px;height:28px;border-radius:50%;background:${meta.color};border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:bold;">${label}</div>
+      <div style="position:absolute;bottom:-14px;background:rgba(0,0,0,0.75);color:#fff;padding:1px 6px;border-radius:4px;font-size:10px;white-space:nowrap;font-weight:500;">📍 终点</div>
+    </div>`;
+}
+
 function groupByDay(points: TripPointView[]): Map<string, TripPointView[]> {
   const map = new Map<string, TripPointView[]>();
   for (const p of points) {
@@ -90,6 +108,14 @@ export function TripMapFullscreen() {
 
       amapModuleRef.current = AMapModule;
 
+      // Inject GPS pulse keyframes for the last-marker animation
+      if (!document.getElementById("gps-pulse-style")) {
+        const style = document.createElement("style");
+        style.id = "gps-pulse-style";
+        style.textContent = "@keyframes gps-pulse{0%{transform:scale(0.6);opacity:0.5}to{transform:scale(1.8);opacity:0}}";
+        document.head.appendChild(style);
+      }
+
       const map = new AMapModule.Map(containerRef.current, {
         zoom: 5,
         center: [104.0, 37.0],
@@ -120,10 +146,10 @@ export function TripMapFullscreen() {
       points.forEach((point, idx) => {
         const pos = snappedPositions[idx];
         if (!pos) return;
-        const meta = POINT_TYPE_META[point.point_type] ?? POINT_TYPE_META.other;
+        const isLast = idx === points.length - 1;
 
         const content = document.createElement("div");
-        content.innerHTML = `<div style="width:28px;height:28px;border-radius:50%;background:${meta.color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:bold;cursor:pointer;">${idx + 1}</div>`;
+        content.innerHTML = buildMarkerHtml(idx + 1, point.point_type, isLast);
 
         const marker = new AMapModule.Marker({
           position: pos,
@@ -315,9 +341,9 @@ export function TripMapFullscreen() {
       const lastIdx = allMarkersRef.current.length - 1;
       allMarkersRef.current.forEach((m, i) => {
         if (!trip.points[i]) return;
-        const meta = POINT_TYPE_META[trip.points[i].point_type] ?? POINT_TYPE_META.other;
+        const isLast = i === lastIdx;
         const el = document.createElement("div");
-        el.innerHTML = `<div style="width:28px;height:28px;border-radius:50%;background:${meta.color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:bold;cursor:pointer;">${i + 1}</div>`;
+        el.innerHTML = buildMarkerHtml(i + 1, trip.points[i].point_type, isLast);
         m.setContent(el);
         // Re-apply zoom visibility (first/last always visible)
         if (i === 0 || i === lastIdx) { m.setMap(map); }
