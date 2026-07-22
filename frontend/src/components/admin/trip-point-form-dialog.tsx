@@ -55,6 +55,24 @@ function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
 }
 
+/** 将 Date 或 ISO 字符串转为 datetime-local 输入格式（浏览器本地时间） */
+function toDatetimeLocalInput(iso: string | Date): string {
+  const d = typeof iso === "string" ? new Date(iso) : iso;
+  // 调整时区偏移，把 UTC Date 的显示值转为本地时间
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+/** 将 datetime-local 输入值（本地时间）解析为 UTC ISO 字符串，避免浏览器差异 */
+function dateTimeLocalToUtc(value: string): string {
+  const [datePart, timePart] = value.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute] = timePart.split(":").map(Number);
+  // 使用显式本地时间构造，不依赖 new Date(string) 的浏览器实现在
+  const localDate = new Date(year, month - 1, day, hour, minute);
+  return localDate.toISOString();
+}
+
 interface TripPointFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -97,8 +115,8 @@ export function TripPointFormDialog({
       latitude: point?.latitude != null ? String(point.latitude) : "",
       longitude: point?.longitude != null ? String(point.longitude) : "",
       arrivedAt: point?.arrived_at
-        ? new Date(point.arrived_at).toISOString().slice(0, 16)
-        : new Date().toISOString().slice(0, 16),
+        ? toDatetimeLocalInput(point.arrived_at)
+        : toDatetimeLocalInput(new Date()),
       description: point?.description ?? "",
     });
   }, [open, point, reset]);
@@ -143,7 +161,7 @@ export function TripPointFormDialog({
       location_name: locName || null,
       latitude: latStr ? parseFloat(latStr) : null,
       longitude: lngStr ? parseFloat(lngStr) : null,
-      arrived_at: values.arrivedAt ? new Date(values.arrivedAt).toISOString() : undefined,
+      arrived_at: values.arrivedAt ? dateTimeLocalToUtc(values.arrivedAt) : undefined,
       sort_order: point?.sort_order ?? 0,
     };
 

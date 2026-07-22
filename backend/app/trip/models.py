@@ -1,8 +1,21 @@
-from datetime import date, datetime
-from typing import Literal, Optional
+from datetime import UTC, date, datetime
+from typing import Annotated, Literal, Optional
 
-from pydantic import model_validator
+from pydantic import BeforeValidator, model_validator
 from sqlalchemy import DateTime, Text
+
+
+def _ensure_utc(v: object) -> datetime | None:
+    """将 naive datetime 强制设为 UTC，确保 JSON 序列化带 Z 后缀。"""
+    if v is None:
+        return None
+    if isinstance(v, datetime) and v.tzinfo is None:
+        return v.replace(tzinfo=UTC)
+    return v  # type: ignore[return-value]
+
+
+# 响应 schema 中所有 datetime 字段统一使用此类型，避免 SQLite 丢失时区
+UtcDateTime = Annotated[datetime | None, BeforeValidator(_ensure_utc)]
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.core.utils import generate_ulid, get_datetime_utc
@@ -142,8 +155,8 @@ class TripPublic(SQLModel):
     status: str
     point_count: int = 0
     total_distance: int | None = None  # 米
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
+    created_at: UtcDateTime = None
+    updated_at: UtcDateTime = None
 
 
 class TripDetail(TripPublic):
@@ -204,12 +217,12 @@ class TripPointPublic(SQLModel):
     location_name: str | None = None
     latitude: float | None = None
     longitude: float | None = None
-    arrived_at: datetime | None = None
+    arrived_at: UtcDateTime = None
     sort_order: int
     polyline_to_next: str | None = None
     distance_to_next: int | None = None
     photos: list[str] = []  # 照片 URL 列表，由 router 填充
-    created_at: datetime | None = None
+    created_at: UtcDateTime = None
 
 
 # ── Schemas: TripPointMedia ───────────────────────────
@@ -234,8 +247,8 @@ class TripCard(SQLModel):
     end_date: date | None = None
     point_count: int = 0
     total_distance: int | None = None
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
+    created_at: UtcDateTime = None
+    updated_at: UtcDateTime = None
 
 
 class TripPointView(SQLModel):
@@ -247,7 +260,7 @@ class TripPointView(SQLModel):
     location_name: str | None = None
     latitude: float | None = None
     longitude: float | None = None
-    arrived_at: datetime | None = None
+    arrived_at: UtcDateTime = None
     sort_order: int
     polyline_to_next: str | None = None  # 高德编码 polyline，前端可直接渲染
     distance_to_next: int | None = None
