@@ -140,10 +140,13 @@ export function TripMapFullscreen() {
         allMarkersRef.current.push(marker);
       });
 
-      // Zoom-based marker visibility: fewer markers at low zoom, all at high zoom
+      // Zoom-based marker visibility: fewer markers at low zoom, all at high zoom.
+      // First and last points are always visible regardless of zoom level.
       const updateMarkerVisibility = () => {
         const z = map.getZoom();
+        const lastIdx = allMarkersRef.current.length - 1;
         allMarkersRef.current.forEach((m, i) => {
+          if (i === 0 || i === lastIdx) { m.setMap(map); return; }
           if (z <= 5) {
             // Only show every 4th marker at low zoom
             m.setMap(i % 4 === 0 ? map : null);
@@ -309,14 +312,16 @@ export function TripMapFullscreen() {
     const map = mapInstanceRef.current;
     if (map && trip) {
       const z = map.getZoom();
+      const lastIdx = allMarkersRef.current.length - 1;
       allMarkersRef.current.forEach((m, i) => {
         if (!trip.points[i]) return;
         const meta = POINT_TYPE_META[trip.points[i].point_type] ?? POINT_TYPE_META.other;
         const el = document.createElement("div");
         el.innerHTML = `<div style="width:28px;height:28px;border-radius:50%;background:${meta.color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:bold;cursor:pointer;">${i + 1}</div>`;
         m.setContent(el);
-        // Re-apply zoom visibility
-        if (z <= 5) m.setMap(i % 4 === 0 ? map : null);
+        // Re-apply zoom visibility (first/last always visible)
+        if (i === 0 || i === lastIdx) { m.setMap(map); }
+        else if (z <= 5) m.setMap(i % 4 === 0 ? map : null);
         else if (z <= 7) m.setMap(i % 2 === 0 ? map : null);
         else m.setMap(map);
       });
