@@ -44,7 +44,6 @@ function buildMarkerHtml(label: number | string, pointType: string, isLast: bool
     <div style="position:relative;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
       <div style="position:absolute;width:36px;height:36px;border-radius:50%;background:${meta.color};opacity:0.25;animation:gps-pulse 2s ease-out infinite;"></div>
       <div style="position:absolute;width:28px;height:28px;border-radius:50%;background:${meta.color};border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:bold;">${label}</div>
-      <div style="position:absolute;bottom:-14px;background:rgba(0,0,0,0.75);color:#fff;padding:1px 6px;border-radius:4px;font-size:10px;white-space:nowrap;font-weight:500;">📍 终点</div>
     </div>`;
 }
 
