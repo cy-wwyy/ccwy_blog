@@ -30,6 +30,7 @@ import { createTripPoint, updateTripPoint, type TripPointPublic } from "@/lib/ap
 
 const POINT_TYPE_ITEMS = [
   { label: "住宿", value: "accommodation" },
+  { label: "露营", value: "camping" },
   { label: "观景台", value: "viewpoint" },
   { label: "午餐", value: "lunch" },
   { label: "加油", value: "gas" },

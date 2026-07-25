@@ -10,6 +10,7 @@ import { fetchPublicTrip, type TripView, type TripPointView } from "@/lib/api";
 
 const POINT_TYPE_META: Record<string, { label: string; color: string }> = {
   accommodation: { label: "住宿", color: "#e74c3c" },
+  camping: { label: "露营", color: "#27ae60" },
   viewpoint: { label: "观景", color: "#2ecc71" },
   lunch: { label: "午餐", color: "#f39c12" },
   gas: { label: "加油", color: "#3498db" },
