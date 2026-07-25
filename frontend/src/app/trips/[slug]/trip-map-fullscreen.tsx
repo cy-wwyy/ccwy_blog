@@ -186,6 +186,8 @@ export function TripMapFullscreen() {
       };
       updateMarkerVisibility();
       map.on("zoomend", updateMarkerVisibility);
+      map.on("click", () => setHovered(null));
+      map.on("movestart", () => setHovered(null));
 
       // Polylines by day
       const dayMap = groupByDay(points);
