@@ -189,22 +189,26 @@ export function TripMapFullscreen() {
       map.on("click", () => setHovered(null));
       map.on("movestart", () => setHovered(null));
 
-      // Polylines by day
+      // Polylines: color by NEXT point's day (the actual riding day towards that point)
       const dayMap = groupByDay(points);
       const dayKeys = Array.from(dayMap.keys());
-      dayKeys.forEach((day, dayIdx) => {
-        const dayPoints = dayMap.get(day)!;
-        const color = DAY_COLORS[dayIdx % DAY_COLORS.length];
-        dayPoints.forEach((point) => {
-          if (!point.polyline_to_next) return;
-          let path: [number, number][] = [];
-          try { path = decodeAmapPolyline(point.polyline_to_next); } catch { return; }
-          if (path.length < 2) return;
-          map.add(new AMapModule.Polyline({
-            path, strokeColor: color, strokeWeight: 4,
-            strokeOpacity: 0.75, lineJoin: "round",
-          }));
-        });
+      const pointDayIdx = new Map<string, number>();
+      points.forEach((p) => {
+        const d = p.arrived_at ? p.arrived_at.slice(0, 10) : "unknown";
+        const di = dayKeys.indexOf(d);
+        pointDayIdx.set(p.id, di >= 0 ? di : 0);
+      });
+      points.forEach((point, i) => {
+        if (!point.polyline_to_next || i >= points.length - 1) return;
+        const nextDayIdx = pointDayIdx.get(points[i + 1].id) ?? 0;
+        const color = DAY_COLORS[nextDayIdx % DAY_COLORS.length];
+        let path: [number, number][] = [];
+        try { path = decodeAmapPolyline(point.polyline_to_next); } catch { return; }
+        if (path.length < 2) return;
+        map.add(new AMapModule.Polyline({
+          path, strokeColor: color, strokeWeight: 4,
+          strokeOpacity: 0.75, lineJoin: "round",
+        }));
       });
 
       // Keep default China overview — don't auto-zoom to markers
