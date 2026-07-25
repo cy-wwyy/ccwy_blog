@@ -22,7 +22,7 @@ from app.core.utils import generate_ulid, get_datetime_utc
 
 # 记录点类型 —— 收敛为有限取值
 PointType = Literal[
-    "accommodation", "viewpoint", "lunch", "gas", "repair",
+    "accommodation", "camping", "rest", "viewpoint", "lunch", "gas", "repair",
     "pass", "ancient_town", "other",
 ]
 # 行程状态
