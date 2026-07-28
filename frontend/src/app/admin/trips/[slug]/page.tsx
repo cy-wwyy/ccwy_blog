@@ -116,7 +116,7 @@ export default function AdminTripDetailPage() {
     }
   };
 
-  const points = trip?.points ?? [];
+  const points = [...(trip?.points ?? [])].reverse();
 
   if (loading) {
     return (
