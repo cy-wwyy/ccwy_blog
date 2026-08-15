@@ -37,7 +37,7 @@ RECOMMENDATION_PROMPT = """\
 - next_stop：结合主路线和当前进度，推荐的下一个主要停留点；主路线信息不足无法判断时返回 null。**必须沿前进方向推荐前方地点，绝不推荐已经走过或身后方向的地点。**
 - detours：从「周边候选景点」里挑最值得绕路去的（最多 5 个），priority 1 最高，detour_km 为距当前点公里数。
 - point_type 取值：town/scenery/landmark/ancient_town/pass/camping/accommodation/gas/repair/supplies/lunch/rest/event/other。
-- reason 用一句话说明推荐理由，贴合旅行者偏好。
+- reason 用一句话说明推荐理由，贴合旅行者偏好；不要写具体距离数字（距离由 distance_km/detour_km 字段给出）。
 
 【旅行信息】
 交通方式：{trip_mode}
