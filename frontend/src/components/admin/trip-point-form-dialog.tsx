@@ -27,29 +27,28 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createTripPoint, updateTripPoint, type TripPointPublic } from "@/lib/api";
+import { POINT_TYPE, POINT_TYPE_GROUPS, POINT_TYPE_META } from "@/lib/constants";
 
-const POINT_TYPE_ITEMS = [
-  { label: "住宿", value: "accommodation" },
-  { label: "露营", value: "camping" },
-  { label: "休整", value: "rest" },
-  { label: "观景台", value: "viewpoint" },
-  { label: "午餐", value: "lunch" },
-  { label: "加油", value: "gas" },
-  { label: "修车", value: "repair" },
-  { label: "垭口", value: "pass" },
-  { label: "古城", value: "ancient_town" },
-  { label: "其他", value: "other" },
-];
-
-const pointSchema = z.object({
-  title: z.string().min(1, "请输入标题"),
-  pointType: z.string(),
-  locationName: z.string(),
-  latitude: z.string(),
-  longitude: z.string(),
-  arrivedAt: z.string(),
-  description: z.string(),
-});
+const pointSchema = z
+  .object({
+    title: z.string(),
+    pointType: z.string(),
+    locationName: z.string(),
+    latitude: z.string(),
+    longitude: z.string(),
+    arrivedAt: z.string(),
+    description: z.string(),
+  })
+  .superRefine((val, ctx) => {
+    // 途经点只需坐标，标题可省略
+    if (val.pointType !== POINT_TYPE.WAYPOINT && !val.title.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "请输入标题",
+        path: ["title"],
+      });
+    }
+  });
 
 type PointFormValues = z.infer<typeof pointSchema>;
 
@@ -98,6 +97,7 @@ export function TripPointFormDialog({
     handleSubmit,
     reset,
     setValue,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<PointFormValues>({
     resolver: zodResolver(pointSchema),
@@ -107,6 +107,9 @@ export function TripPointFormDialog({
       arrivedAt: "", description: "",
     },
   });
+
+  const pointType = useWatch({ control, name: "pointType" });
+  const isWaypoint = pointType === POINT_TYPE.WAYPOINT;
 
   useEffect(() => {
     if (!open) return;
@@ -192,19 +195,25 @@ export function TripPointFormDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="pt-title">标题</Label>
-              <Input id="pt-title" {...register("title")} placeholder="如「翻越折多山」" aria-invalid={!!errors.title} />
-              {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
-            </div>
+            {!isWaypoint && (
+              <div className="space-y-2">
+                <Label htmlFor="pt-title">标题</Label>
+                <Input id="pt-title" {...register("title")} placeholder="如「翻越折多山」" aria-invalid={!!errors.title} />
+                {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
+              </div>
+            )}
             <div className="space-y-2">
               <Label>类型</Label>
               <select
                 {...register("pointType")}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
-                {POINT_TYPE_ITEMS.map((item) => (
-                  <option key={item.value} value={item.value}>{item.label}</option>
+                {POINT_TYPE_GROUPS.map((group) => (
+                  <optgroup key={group.label} label={group.label}>
+                    {group.types.map((type) => (
+                      <option key={type} value={type}>{POINT_TYPE_META[type].label}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>

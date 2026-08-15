@@ -21,9 +21,12 @@ from sqlmodel import Field, Relationship, SQLModel
 from app.core.utils import generate_ulid, get_datetime_utc
 
 # 记录点类型 —— 收敛为有限取值
+# 分组：过夜(accommodation/camping) 补给(gas/repair/supplies) 休整(lunch/rest)
+#       景观(viewpoint/landmark/pass/ancient_town) 途经(town/event) 特殊(waypoint) 兜底(other)
 PointType = Literal[
-    "accommodation", "camping", "rest", "viewpoint", "lunch", "gas", "repair",
-    "pass", "ancient_town", "other",
+    "accommodation", "camping", "gas", "repair", "supplies",
+    "lunch", "rest", "viewpoint", "landmark", "pass", "ancient_town",
+    "town", "event", "waypoint", "other",
 ]
 # 行程状态
 TripStatus = Literal["draft", "published"]

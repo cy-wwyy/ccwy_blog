@@ -43,6 +43,7 @@ backend/app/
 ├── stats/               # PageView 事件表，埋点去重 + 浏览量/访客量聚合
 ├── storage/             # 抽象基类 + Local + OSS 实现（本地优先读，OSS 回源回填）
 ├── ai/                  # OpenAI 兼容 LLM 客户端，配置从 SiteSetting 读（非 .env），运行时热修改
+├── trip/                # 行程记录（摩旅日志）：Trip/TripPoint/TripPointMedia — 高德地图集成 + admin + public
 ├── tools/               # TOTP 2FA 工具
 ```
 
@@ -51,14 +52,16 @@ backend/app/
 - **RBAC 鉴权**：User → UserRole → Role → RolePermission → Permission。`require_permission(code)` 返回 Depends。路由通过 `_current_user: User = Depends(require_permission("posts:create"))` 保护。
 - **存储双写**：上传同时写本地 + OSS（可选），读取本地优先，本地缺失从 OSS 回源并回填本地。`main.py` 的 `/uploads/{path}` 端点封装此逻辑。
 - **AI 配置**：不走 `.env`，从 `SiteSetting` KV 表读取（`ai_enabled/api_base/api_key/model/reasoning_effort/extra_body`），支持运行时热修改。
+- **行程记录点**：`Trip` 一对多 `TripPoint`（`point_type` 为 `Literal`，含 `camping`/`rest`/`viewpoint`/`pass` 等）。`trip/helpers.py` 封装高德地图 Web API——地理编码/逆地理编码/驾车路径规划，路线结果缓存在 `TripPoint.polyline_to_next`/`distance_to_next`（米），供前端直接渲染。
 
 ```
 frontend/src/
 ├── app/
 │   ├── layout.tsx        # 根布局，theme-init script（防闪烁）
 │   ├── providers.tsx      # ThemeProvider → TooltipProvider → AuthProvider → Toaster
-│   ├── (site)/           # 公开站点：首页/博客/相册/关于/项目，layout 含侧栏+右栏+顶栏
-│   ├── admin/            # 后台：仪表盘/文章CRUD/分类/标签/相册/媒体/设置/工具
+│   ├── (site)/           # 公开站点：首页/博客/相册/行程/关于/项目，layout 含侧栏+右栏+顶栏
+│   ├── trips/[slug]/     # 行程详情页（全屏高德地图渲染记录点 + polyline）
+│   ├── admin/            # 后台：仪表盘/文章CRUD/分类/标签/相册/媒体/设置/工具/行程
 │   └── login/            # 登录页
 ├── components/
 │   ├── ui/               # shadcn/ui 组件（Base UI 底层）
@@ -67,6 +70,7 @@ frontend/src/
 │   ├── editor/           # md-editor（vditor 封装）、vditor-preview
 │   └── auth/             # login-form
 ├── hooks/                # use-auth（AuthContext：token/用户状态/登录/登出/401兜底）
+├── types/                # 第三方类型声明（amap.d.ts 高德 JS API）
 └── lib/                  # api.ts（统一 request() + ApiError + 所有API函数）、constants.ts、utils.ts
 ```
 
@@ -114,5 +118,5 @@ cd frontend && npx shadcn@latest docs <component-name>  # 获取组件的 docs/e
 ```
 
 ### 环境变量
-- 后端：`backend/.env`（从 `.env.example` 复制），含 `SECRET_KEY`、管理员账号、OSS 配置等
+- 后端：`backend/.env`（从 `.env.example` 复制），含 `SECRET_KEY`、管理员账号、OSS 配置、`AMAP_WEB_KEY`（高德地图，行程模块用）等
 - 前端：`frontend/.env.local` 可选设 `BACKEND_URL`、`ALLOWED_DEV_ORIGINS`

@@ -115,6 +115,13 @@ async def create_point(
     # 自动补全位置
     await fill_location_auto(point)
 
+    # 途经点：只要求坐标，标题/地名由后端自动补全
+    if point.point_type == "waypoint":
+        if not (point.title or "").strip():
+            point.title = point.location_name or "途经点"
+        if not point.arrived_at:
+            point.arrived_at = datetime.now(UTC)
+
     session.add(point)
     await session.flush()
 
@@ -171,6 +178,10 @@ async def update_point(
         # 自动补全（仅当位置字段有变化时）
         if loc_changed:
             await fill_location_auto(db_point)
+
+        # 途经点标题为空时自动补全（用逆地理编码后的地名或默认值）
+        if db_point.point_type == "waypoint" and not (db_point.title or "").strip():
+            db_point.title = db_point.location_name or "途经点"
 
         session.add(db_point)
 

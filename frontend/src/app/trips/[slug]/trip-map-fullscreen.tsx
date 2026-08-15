@@ -7,19 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { fetchPublicTrip, type TripView, type TripPointView } from "@/lib/api";
-
-const POINT_TYPE_META: Record<string, { label: string; color: string }> = {
-  accommodation: { label: "住宿", color: "#e74c3c" },
-  camping: { label: "露营", color: "#27ae60" },
-  rest: { label: "休整", color: "#8e44ad" },
-  viewpoint: { label: "观景", color: "#2ecc71" },
-  lunch: { label: "午餐", color: "#f39c12" },
-  gas: { label: "加油", color: "#3498db" },
-  repair: { label: "修车", color: "#95a5a6" },
-  pass: { label: "垭口", color: "#9b59b6" },
-  ancient_town: { label: "古城", color: "#e67e22" },
-  other: { label: "其他", color: "#7f8c8d" },
-};
+import { POINT_TYPE, POINT_TYPE_META, type PointType } from "@/lib/constants";
 
 const DAY_COLORS = [
   "#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6",
@@ -34,7 +22,7 @@ function formatDist(meters: number | null): string {
 
 /** 生成标记点的 HTML。isLast 时渲染为 GPS 定位样式（脉冲波纹 + 定位点）。 */
 function buildMarkerHtml(label: number | string, pointType: string, isLast: boolean): string {
-  const meta = POINT_TYPE_META[pointType] ?? POINT_TYPE_META.other;
+  const meta = POINT_TYPE_META[pointType as PointType] ?? POINT_TYPE_META.other;
 
   if (!isLast) {
     // 普通编号圆点
@@ -144,13 +132,18 @@ export function TripMapFullscreen() {
         return [p.longitude, p.latitude] as [number, number];
       });
 
-      points.forEach((point, idx) => {
-        const pos = snappedPositions[idx];
+      // 途经点仅用于修正路线，不渲染为独立标记
+      const visiblePoints = points
+        .map((point, origIdx) => ({ point, origIdx }))
+        .filter(({ point }) => point.point_type !== POINT_TYPE.WAYPOINT);
+
+      visiblePoints.forEach(({ point, origIdx }, visibleIdx) => {
+        const pos = snappedPositions[origIdx];
         if (!pos) return;
-        const isLast = idx === points.length - 1;
+        const isLast = visibleIdx === visiblePoints.length - 1;
 
         const content = document.createElement("div");
-        content.innerHTML = buildMarkerHtml(idx + 1, point.point_type, isLast);
+        content.innerHTML = buildMarkerHtml(visibleIdx + 1, point.point_type, isLast);
 
         const marker = new AMapModule.Marker({
           position: pos,
@@ -248,12 +241,15 @@ export function TripMapFullscreen() {
       return;
     }
 
-    // Build path + per-point progress percentages
+    // Build path + per-visible-point progress percentages
+    const visiblePoints = trip.points.filter((p) => p.point_type !== POINT_TYPE.WAYPOINT);
     const path: [number, number][] = [];
     const pointPcts: number[] = [];
     let cumDist = 0;
     for (const point of trip.points) {
-      pointPcts.push(cumDist);
+      if (point.point_type !== POINT_TYPE.WAYPOINT) {
+        pointPcts.push(cumDist);
+      }
       if (point.polyline_to_next) {
         const seg = decodeAmapPolyline(point.polyline_to_next);
         for (let i = 0; i < seg.length; i += 3) path.push(seg[i]);
@@ -304,13 +300,13 @@ export function TripMapFullscreen() {
 
     const labelTimer = setInterval(() => {
       const progress = Math.min((Date.now() - startTime) / totalMs, 1);
-      for (let i = shownCount; i < trip.points.length; i++) {
+      for (let i = shownCount; i < visiblePoints.length; i++) {
         if (progress >= pointPcts[i]) {
           const m = markers[i];
           if (m) {
             m.setMap(map);
             const labelEl = document.createElement("div");
-            labelEl.innerHTML = `<div style="background:rgba(0,0,0,0.8);color:#fff;padding:3px 10px;border-radius:6px;font-size:13px;font-weight:600;white-space:nowrap;transform:translate(-50%,-160%);">${trip.points[i].title}</div>`;
+            labelEl.innerHTML = `<div style="background:rgba(0,0,0,0.8);color:#fff;padding:3px 10px;border-radius:6px;font-size:13px;font-weight:600;white-space:nowrap;transform:translate(-50%,-160%);">${visiblePoints[i].title}</div>`;
             m.setContent(labelEl);
           }
           shownCount = i + 1;
@@ -345,12 +341,14 @@ export function TripMapFullscreen() {
     const map = mapInstanceRef.current;
     if (map && trip) {
       const z = map.getZoom();
+      const visiblePoints = trip.points.filter((p) => p.point_type !== POINT_TYPE.WAYPOINT);
       const lastIdx = allMarkersRef.current.length - 1;
       allMarkersRef.current.forEach((m, i) => {
-        if (!trip.points[i]) return;
+        const point = visiblePoints[i];
+        if (!point) return;
         const isLast = i === lastIdx;
         const el = document.createElement("div");
-        el.innerHTML = buildMarkerHtml(i + 1, trip.points[i].point_type, isLast);
+        el.innerHTML = buildMarkerHtml(i + 1, point.point_type, isLast);
         m.setContent(el);
         // Re-apply zoom visibility (first/last always visible)
         if (i === 0 || i === lastIdx) { m.setMap(map); }
@@ -388,7 +386,8 @@ export function TripMapFullscreen() {
     );
   }
 
-  const dayMap = groupByDay(trip.points);
+  const visiblePoints = trip.points.filter((p) => p.point_type !== POINT_TYPE.WAYPOINT);
+  const dayMap = groupByDay(visiblePoints);
   const dayKeys = Array.from(dayMap.keys());
 
   return (
@@ -450,11 +449,11 @@ export function TripMapFullscreen() {
             <div className="flex items-center gap-2">
               <span
                 className="size-2.5 rounded-full shrink-0"
-                style={{ backgroundColor: (POINT_TYPE_META[hovered.point.point_type] ?? POINT_TYPE_META.other).color }}
+                style={{ backgroundColor: (POINT_TYPE_META[hovered.point.point_type as PointType] ?? POINT_TYPE_META.other).color }}
               />
               <h3 className="font-semibold text-sm">{hovered.point.title}</h3>
               <Badge variant="secondary" className="text-[10px] ml-auto">
-                {(POINT_TYPE_META[hovered.point.point_type] ?? POINT_TYPE_META.other).label}
+                {(POINT_TYPE_META[hovered.point.point_type as PointType] ?? POINT_TYPE_META.other).label}
               </Badge>
             </div>
             {hovered.point.location_name && (

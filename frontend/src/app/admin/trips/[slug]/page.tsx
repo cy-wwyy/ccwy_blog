@@ -32,17 +32,7 @@ import {
   type TripDetail,
   type TripPointPublic,
 } from "@/lib/api";
-
-const POINT_TYPE_META: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
-  accommodation: { label: "住宿", variant: "default" },
-  viewpoint: { label: "观景", variant: "secondary" },
-  lunch: { label: "午餐", variant: "outline" },
-  gas: { label: "加油", variant: "outline" },
-  repair: { label: "修车", variant: "outline" },
-  pass: { label: "垭口", variant: "secondary" },
-  ancient_town: { label: "古城", variant: "default" },
-  other: { label: "其他", variant: "outline" },
-};
+import { POINT_TYPE_META, type PointType } from "@/lib/constants";
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
@@ -198,11 +188,9 @@ export default function AdminTripDetailPage() {
             <td className="text-center text-muted-foreground">{idx + 1}</td>
             <td className="text-center font-medium">{point.title}</td>
             <td className="text-center">
-              {POINT_TYPE_META[point.point_type] && (
-                <Badge variant={POINT_TYPE_META[point.point_type].variant}>
-                  {POINT_TYPE_META[point.point_type].label}
-                </Badge>
-              )}
+              <Badge variant={(POINT_TYPE_META[point.point_type as PointType] ?? POINT_TYPE_META.other).variant}>
+                {(POINT_TYPE_META[point.point_type as PointType] ?? POINT_TYPE_META.other).label}
+              </Badge>
             </td>
             <td className="text-center text-muted-foreground text-sm">
               {point.location_name || (point.latitude ? `${point.latitude.toFixed(4)}, ${point.longitude?.toFixed(4)}` : "-")}
