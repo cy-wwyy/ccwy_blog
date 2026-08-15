@@ -8,7 +8,13 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.ai import client
 from app.core.db import engine
-from app.trip.helpers import TRIP_MODE_RADIUS, search_nearby_poi
+from app.trip.helpers import (
+    TRIP_MODE_RADIUS,
+    bearing_compass,
+    driving_route,
+    geocode,
+    search_nearby_poi,
+)
 from app.trip.models import Trip, TripPoint
 
 logger = logging.getLogger(__name__)
@@ -69,6 +75,24 @@ async def _build_recommendation(
         for p in recent
     ]
 
+    # 1b. 前进方向（最近两个点坐标算方位角，供 LLM 避免推荐身后地点）
+    direction = ""
+    if len(recent) >= 2:
+        prev_p, cur_p = recent[-2], recent[-1]
+        if (
+            prev_p.longitude is not None and prev_p.latitude is not None
+            and cur_p.longitude is not None and cur_p.latitude is not None
+        ):
+            compass = bearing_compass(
+                prev_p.longitude, prev_p.latitude,
+                cur_p.longitude, cur_p.latitude,
+            )
+            direction = (
+                f"前进方向：正在往{compass}方向前进（最近依次经过 "
+                f"「{prev_p.title}」→「{cur_p.title}」）。"
+                "下一站必须沿此方向推荐前方地点，不要推荐身后已走过的地方。"
+            )
+
     # 2. 高德周边搜索候选 POI
     candidates: list[dict] = []
     if point.latitude is not None and point.longitude is not None:
@@ -91,9 +115,26 @@ async def _build_recommendation(
         route_plan=trip.route_plan,
         interest_tags=trip.interest_tags,
         preferences=trip.preferences,
+        direction=direction,
         recent_points=recent_points,
         candidates=candidates,
     )
     if result is None:
         raise RuntimeError("LLM 未返回有效推荐")
+
+    # 3b. 后处理：用高德验证 next_stop 真实距离（LLM 估的距离可能不准）
+    ns = result.get("next_stop")
+    if (
+        isinstance(ns, dict)
+        and ns.get("name")
+        and point.longitude is not None
+        and point.latitude is not None
+    ):
+        coords = await geocode(str(ns["name"]))
+        if coords:
+            route = await driving_route(
+                point.longitude, point.latitude, coords[0], coords[1]
+            )
+            if route:
+                ns["distance_km"] = round(route[1] / 1000, 1)
     return result

@@ -336,3 +336,16 @@ def _haversine(lng1: float, lat1: float, lng2: float, lat2: float) -> float:
     dlat = lat2 - lat1
     a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlng / 2) ** 2
     return 6371.0 * 2 * asin(sqrt(a))
+
+
+def bearing_compass(lng1: float, lat1: float, lng2: float, lat2: float) -> str:
+    """从点1到点2的前进方向，返回中文方位（北/东北/东/…）。"""
+    from math import atan2, cos, degrees, radians, sin
+
+    dlng = radians(lng2 - lng1)
+    lat1r, lat2r = radians(lat1), radians(lat2)
+    x = sin(dlng) * cos(lat2r)
+    y = cos(lat1r) * sin(lat2r) - sin(lat1r) * cos(lat2r) * cos(dlng)
+    bearing = (degrees(atan2(x, y)) + 360) % 360
+    compass = ("北", "东北", "东", "东南", "南", "西南", "西", "西北")
+    return compass[int((bearing + 22.5) / 45) % 8]

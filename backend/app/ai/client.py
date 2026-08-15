@@ -150,6 +150,7 @@ async def generate_recommendation(
     route_plan: str | None,
     interest_tags: str | None,
     preferences: str | None,
+    direction: str,
     recent_points: list[dict],
     candidates: list[dict],
 ) -> dict | None:
@@ -178,6 +179,7 @@ async def generate_recommendation(
         route_plan=route_plan or "（未填写）",
         interest_tags=interest_tags or "（未填写）",
         preferences=preferences or "（未填写）",
+        direction=direction,
         recent_points=json.dumps(recent_points, ensure_ascii=False),
         candidates=json.dumps(candidates, ensure_ascii=False),
     )
