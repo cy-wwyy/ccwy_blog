@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -6,6 +6,7 @@ from app.core.deps import SessionDep, require_permission
 from app.core.models import Media, Message
 from app.storage import storage
 from app.trip import crud
+from app.trip.ai_tasks import generate_recommendation_task
 from app.trip.models import (
     Trip,
     TripCreate,
@@ -73,6 +74,8 @@ async def _point_to_public(
         polyline_to_next=point.polyline_to_next,
         distance_to_next=point.distance_to_next,
         photos=photos,
+        ai_rec_status=point.ai_rec_status,
+        ai_rec=point.ai_rec,
         created_at=point.created_at,
     )
 
@@ -101,6 +104,10 @@ async def _trip_to_public(
         end_date=trip.end_date,
         is_public=trip.is_public,
         status=trip.status,
+        trip_mode=trip.trip_mode,
+        route_plan=trip.route_plan,
+        interest_tags=trip.interest_tags,
+        preferences=trip.preferences,
         point_count=len(points),
         total_distance=total_dist or None,
         created_at=trip.created_at,
@@ -274,6 +281,7 @@ async def admin_create_point(
     session: SessionDep,
     trip_id: str,
     point_in: TripPointCreate,
+    background_tasks: BackgroundTasks,
     _=Depends(require_permission("trip:manage")),
 ) -> TripPointPublic:
     await _get_trip_or_404(session, trip_id)
@@ -290,6 +298,14 @@ async def admin_create_point(
                 status_code=400, detail=f"媒体文件不存在: {', '.join(missing)}"
             )
     point = await crud.create_point(session=session, point_in=point_in)
+
+    # 途经点（纯路线锚点）不生成推荐
+    if point.point_type != "waypoint":
+        point.ai_rec_status = "pending"
+        session.add(point)
+        await session.commit()
+        background_tasks.add_task(generate_recommendation_task, point.id)
+
     return await _point_to_public(session, point)
 
 

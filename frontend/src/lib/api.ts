@@ -744,6 +744,10 @@ export interface TripPublic {
   end_date: string | null;
   is_public: boolean;
   status: string;
+  trip_mode: string;
+  route_plan: string | null;
+  interest_tags: string | null;
+  preferences: string | null;
   point_count: number;
   total_distance: number | null;
   created_at: string | null;
@@ -764,6 +768,8 @@ export interface TripPointPublic {
   polyline_to_next: string | null;
   distance_to_next: number | null;
   photos: string[];
+  ai_rec_status: string;
+  ai_rec: string | null;
   created_at: string | null;
 }
 
@@ -785,6 +791,10 @@ export interface TripWritePayload {
   end_date?: string | null;
   is_public?: boolean;
   status?: string;
+  trip_mode?: string;
+  route_plan?: string | null;
+  interest_tags?: string | null;
+  preferences?: string | null;
 }
 
 export interface TripPointWritePayload {
@@ -798,6 +808,28 @@ export interface TripPointWritePayload {
   arrived_at?: string;
   sort_order?: number;
   media_ids?: string[];
+}
+
+// ── AI 推荐 ──────────────────────────────────────────
+
+export interface RecommendationStop {
+  name: string;
+  reason: string;
+  distance_km: number;
+  point_type: string;
+}
+
+export interface RecommendationDetour {
+  name: string;
+  reason: string;
+  detour_km: number;
+  point_type: string;
+  priority: number;
+}
+
+export interface RecommendationPayload {
+  next_stop: RecommendationStop | null;
+  detours: RecommendationDetour[];
 }
 
 // ── Admin Trip API ───────────────────────────────────

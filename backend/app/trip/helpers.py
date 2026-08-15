@@ -17,6 +17,14 @@ _ROUTE_TIMEOUT = 10.0
 # 两点间最大直线距离（公里），超出则跳过路径规划
 _MAX_STRAIGHT_DISTANCE = 500
 
+# 交通方式 → AI 推荐周边搜索半径（米）
+TRIP_MODE_RADIUS: dict[str, int] = {
+    "hiking": 20_000,
+    "cycling": 50_000,
+    "motorcycle": 100_000,
+    "driving": 150_000,
+}
+
 
 def _key_params() -> dict[str, str]:
     return {"key": settings.AMAP_WEB_KEY}
@@ -128,6 +136,68 @@ async def driving_route(
     polyline = ";".join(segments)
     distance = int(path.get("distance", 0))
     return polyline, distance
+
+
+# ── POI 周边搜索 ─────────────────────────────────────
+
+
+async def search_nearby_poi(
+    lng: float, lat: float, radius: int, types: str = "110000"
+) -> list[dict] | None:
+    """高德周边搜索 POI，供 AI 推荐候选。
+
+    Args:
+        lng, lat: 中心点经纬度
+        radius: 搜索半径（米）
+        types: 高德 POI 分类编码，默认 110000（风景名胜）
+
+    Returns:
+        精简后的 POI 列表 [{name, address, distance_m, lng, lat}] 或 None
+    """
+    params = {
+        **_key_params(),
+        "location": f"{lng},{lat}",
+        "radius": str(radius),
+        "types": types,
+        "offset": "20",
+        "page": "1",
+        "extensions": "base",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(f"{_AMAP_BASE}/place/around", params=params)
+            resp.raise_for_status()
+    except Exception:
+        logger.warning("高德周边搜索失败: (%.4f,%.4f)", lng, lat, exc_info=True)
+        return None
+    data = resp.json()
+    if data.get("status") != "1" or not data.get("pois"):
+        logger.warning("高德周边搜索无结果: (%.4f,%.4f)", lng, lat)
+        return None
+
+    pois: list[dict] = []
+    for p in data["pois"]:
+        plng, plat = None, None
+        loc = p.get("location", "")
+        if loc:
+            try:
+                plng_str, plat_str = loc.split(",")
+                plng, plat = float(plng_str), float(plat_str)
+            except ValueError:
+                pass
+        raw_dist = p.get("distance")
+        try:
+            dist_m = int(raw_dist) if raw_dist is not None else None
+        except (TypeError, ValueError):
+            dist_m = None
+        pois.append({
+            "name": p.get("name", ""),
+            "address": p.get("address", ""),
+            "distance_m": dist_m,
+            "lng": plng,
+            "lat": plat,
+        })
+    return pois
 
 
 # ── polyline 缓存更新 ─────────────────────────────────

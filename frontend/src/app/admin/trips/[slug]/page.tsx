@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  Plus, ArrowLeft, Edit, Trash2,
+  Plus, ArrowLeft, Edit, Trash2, Loader2, Sparkles, AlertCircle,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -31,6 +31,7 @@ import {
   deleteTripPoint,
   type TripDetail,
   type TripPointPublic,
+  type RecommendationPayload,
 } from "@/lib/api";
 import { POINT_TYPE_META, type PointType } from "@/lib/constants";
 
@@ -42,6 +43,52 @@ function formatDist(meters: number | null): string {
   if (!meters) return "-";
   if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`;
   return `${meters} m`;
+}
+
+function parseRecommendation(aiRec: string | null): RecommendationPayload | null {
+  if (!aiRec) return null;
+  try {
+    return JSON.parse(aiRec) as RecommendationPayload;
+  } catch {
+    return null;
+  }
+}
+
+function RecommendationContent({ aiRec }: { aiRec: string | null }) {
+  const rec = parseRecommendation(aiRec);
+  if (!rec || (!rec.next_stop && rec.detours.length === 0)) {
+    return <p className="py-2 text-sm text-muted-foreground">暂无推荐内容</p>;
+  }
+  return (
+    <div className="space-y-3 py-2">
+      {rec.next_stop && (
+        <div className="rounded-md border p-3">
+          <div className="flex items-center gap-2">
+            <Badge variant="default">下一站</Badge>
+            <span className="font-semibold">{rec.next_stop.name}</span>
+            <span className="text-sm text-muted-foreground">约 {rec.next_stop.distance_km} km</span>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">{rec.next_stop.reason}</p>
+        </div>
+      )}
+      {rec.detours.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">周边值得绕路：</p>
+          {rec.detours.map((d, i) => (
+            <div key={i} className="rounded-md border p-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">P{d.priority}</span>
+                <span className="font-medium">{d.name}</span>
+                <Badge variant="secondary">{(POINT_TYPE_META[d.point_type as PointType] ?? POINT_TYPE_META.other).label}</Badge>
+                <span className="text-sm text-muted-foreground">绕路 {d.detour_km} km</span>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">{d.reason}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function AdminTripDetailPage() {
@@ -64,22 +111,32 @@ export default function AdminTripDetailPage() {
   const [deleteTarget, setDeleteTarget] = useState<TripPointPublic | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const loadTrip = useCallback(async () => {
+  // AI 推荐弹窗
+  const [recTarget, setRecTarget] = useState<TripPointPublic | null>(null);
+
+  const loadTrip = useCallback(async (silent = false) => {
     if (!token) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const data = await getTripBySlug(token, slug);
       setTrip(data);
     } catch (err) {
-      toast.error(errorMessage(err, "加载行程失败"));
+      if (!silent) toast.error(errorMessage(err, "加载行程失败"));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [token, slug]);
 
   useEffect(() => {
     loadTrip();
   }, [loadTrip]);
+
+  // AI 推荐生成中 → 每 5s 静默轮询，直到无 pending
+  useEffect(() => {
+    if (!trip || !trip.points.some((p) => p.ai_rec_status === "pending")) return;
+    const id = setInterval(() => loadTrip(true), 5000);
+    return () => clearInterval(id);
+  }, [trip, loadTrip]);
 
   const openCreatePoint = () => {
     setEditingPoint(null);
@@ -165,7 +222,7 @@ export default function AdminTripDetailPage() {
         loading={false}
         empty={points.length === 0}
         emptyText="还没有记录点，点击右上角添加第一个吧"
-        colSpan={7}
+        colSpan={8}
         page={1}
         totalPages={1}
         onPageChange={() => {}}
@@ -178,6 +235,7 @@ export default function AdminTripDetailPage() {
               <TableHead className="text-center w-[20%]">位置</TableHead>
               <TableHead className="text-center w-[15%]">到达时间</TableHead>
               <TableHead className="text-center w-[10%]">距下一点</TableHead>
+              <TableHead className="text-center w-16">AI 推荐</TableHead>
               <TableHead className="text-center w-24">操作</TableHead>
             </TableRow>
           </TableHeader>
@@ -200,6 +258,19 @@ export default function AdminTripDetailPage() {
             </td>
             <td className="text-center text-muted-foreground text-sm">
               {formatDist(point.distance_to_next)}
+            </td>
+            <td className="text-center">
+              {point.ai_rec_status === "pending" && (
+                <Loader2 className="size-4 animate-spin text-muted-foreground" aria-label="生成中" />
+              )}
+              {point.ai_rec_status === "ready" && (
+                <Button variant="ghost" size="icon" aria-label="查看推荐" title="查看推荐" onClick={() => setRecTarget(point)}>
+                  <Sparkles className="size-4" />
+                </Button>
+              )}
+              {point.ai_rec_status === "failed" && (
+                <AlertCircle className="size-4 text-destructive" aria-label="推荐失败" />
+              )}
             </td>
             <td className="text-center">
               <div className="flex items-center justify-center gap-0">
@@ -235,6 +306,19 @@ export default function AdminTripDetailPage() {
           onSaved={loadTrip}
         />
       )}
+
+      {/* AI 推荐弹窗 */}
+      <Dialog open={!!recTarget} onOpenChange={() => setRecTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>AI 下一程推荐</DialogTitle>
+            <DialogDescription>
+              基于「{recTarget?.title}」及最近行程生成，仅供参考
+            </DialogDescription>
+          </DialogHeader>
+          <RecommendationContent aiRec={recTarget?.ai_rec ?? null} />
+        </DialogContent>
+      </Dialog>
 
       {/* 删除记录点确认 */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>

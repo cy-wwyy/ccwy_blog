@@ -30,6 +30,14 @@ PointType = Literal[
 ]
 # 行程状态
 TripStatus = Literal["draft", "published"]
+# 交通方式
+TripMode = Literal["hiking", "cycling", "motorcycle", "driving"]
+# AI 推荐状态
+RecStatus = Literal["none", "pending", "ready", "failed"]
+# 兴趣标签候选（跨交通方式通用）
+INTEREST_TAGS = [
+    "自然风景", "人文历史", "美食", "小众秘境", "极限挑战", "民俗体验", "摄影", "露营",
+]
 
 
 # ── Trip 表 ──────────────────────────────────────────
@@ -47,6 +55,11 @@ class Trip(SQLModel, table=True):
     end_date: date | None = Field(default=None)
     is_public: bool = True
     status: str = Field(default="draft", max_length=16)
+    # AI 推荐上下文：交通方式 + 规划信息（仅后台，前台公开不暴露）
+    trip_mode: str = Field(default="motorcycle", max_length=32)
+    route_plan: str | None = Field(default=None, sa_type=Text)
+    interest_tags: str | None = Field(default=None, max_length=512)
+    preferences: str | None = Field(default=None, sa_type=Text)
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore
@@ -86,6 +99,9 @@ class TripPoint(SQLModel, table=True):
     # 高德路径规划缓存：到下一个记录点的路线 polyline
     polyline_to_next: str | None = Field(default=None, sa_type=Text)
     distance_to_next: int | None = Field(default=None)  # 米
+    # AI 推荐：创建点后异步生成下一程推荐（JSON 存 ai_rec）
+    ai_rec_status: str = Field(default="none", max_length=16)
+    ai_rec: str | None = Field(default=None, sa_type=Text)
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore
@@ -129,6 +145,10 @@ class TripBase(SQLModel):
     end_date: date | None = None
     is_public: bool = True
     status: TripStatus = "draft"
+    trip_mode: TripMode = "motorcycle"
+    route_plan: str | None = None
+    interest_tags: str | None = None
+    preferences: str | None = None
 
 
 class TripCreate(TripBase):
@@ -144,6 +164,10 @@ class TripUpdate(SQLModel):
     end_date: date | None = None
     is_public: bool | None = None
     status: TripStatus | None = None
+    trip_mode: TripMode | None = None
+    route_plan: str | None = None
+    interest_tags: str | None = None
+    preferences: str | None = None
 
 
 class TripPublic(SQLModel):
@@ -156,6 +180,10 @@ class TripPublic(SQLModel):
     end_date: date | None = None
     is_public: bool
     status: str
+    trip_mode: str = "motorcycle"
+    route_plan: str | None = None
+    interest_tags: str | None = None
+    preferences: str | None = None
     point_count: int = 0
     total_distance: int | None = None  # 米
     created_at: UtcDateTime = None
@@ -225,6 +253,8 @@ class TripPointPublic(SQLModel):
     polyline_to_next: str | None = None
     distance_to_next: int | None = None
     photos: list[str] = []  # 照片 URL 列表，由 router 填充
+    ai_rec_status: str = "none"
+    ai_rec: str | None = None
     created_at: UtcDateTime = None
 
 

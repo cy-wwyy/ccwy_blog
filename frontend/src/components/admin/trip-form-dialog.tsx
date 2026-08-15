@@ -37,6 +37,10 @@ const tripSchema = z.object({
   endDate: z.string(),
   isPublic: z.string(),
   status: z.string(),
+  tripMode: z.string(),
+  routePlan: z.string(),
+  interestTags: z.array(z.string()),
+  preferences: z.string(),
 });
 
 type TripFormValues = z.infer<typeof tripSchema>;
@@ -48,6 +52,15 @@ const VISIBILITY_ITEMS = [
 const STATUS_ITEMS = [
   { label: "已发布", value: "published" },
   { label: "草稿", value: "draft" },
+];
+const TRIP_MODE_ITEMS = [
+  { label: "徒步", value: "hiking" },
+  { label: "骑行", value: "cycling" },
+  { label: "摩旅", value: "motorcycle" },
+  { label: "自驾", value: "driving" },
+];
+const INTEREST_TAG_ITEMS = [
+  "自然风景", "人文历史", "美食", "小众秘境", "极限挑战", "民俗体验", "摄影", "露营",
 ];
 
 function errorMessage(err: unknown, fallback: string): string {
@@ -75,6 +88,7 @@ export function AdminTripFormDialog({
     control,
     reset,
     setError,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<TripFormValues>({
     resolver: zodResolver(tripSchema),
@@ -82,10 +96,12 @@ export function AdminTripFormDialog({
       title: "", slug: "", description: "",
       startDate: "", endDate: "",
       isPublic: "true", status: "draft",
+      tripMode: "motorcycle", routePlan: "", interestTags: [], preferences: "",
     },
   });
 
   const title = useWatch({ control, name: "title" });
+  const interestTags = useWatch({ control, name: "interestTags" });
 
   useEffect(() => {
     if (!open) return;
@@ -97,6 +113,10 @@ export function AdminTripFormDialog({
       endDate: trip?.end_date ?? "",
       isPublic: trip ? (trip.is_public ? "true" : "false") : "true",
       status: trip?.status ?? "draft",
+      tripMode: trip?.trip_mode ?? "motorcycle",
+      routePlan: trip?.route_plan ?? "",
+      interestTags: trip?.interest_tags ? trip.interest_tags.split(",").filter(Boolean) : [],
+      preferences: trip?.preferences ?? "",
     });
   }, [open, trip, reset]);
 
@@ -115,6 +135,10 @@ export function AdminTripFormDialog({
       end_date: values.endDate || null,
       is_public: values.isPublic === "true",
       status: values.status,
+      trip_mode: values.tripMode,
+      route_plan: values.routePlan || null,
+      interest_tags: values.interestTags.length ? values.interestTags.join(",") : null,
+      preferences: values.preferences || null,
     };
     try {
       if (trip) {
@@ -205,6 +229,59 @@ export function AdminTripFormDialog({
                   )}
                 />
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>交通方式</Label>
+                <Controller
+                  control={control}
+                  name="tripMode"
+                  render={({ field }) => (
+                    <Select items={TRIP_MODE_ITEMS} value={field.value} onValueChange={(val) => field.onChange(val ?? "motorcycle")}>
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {TRIP_MODE_ITEMS.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="trip-route">主路线（可选）</Label>
+                <Textarea id="trip-route" {...register("routePlan")} placeholder="如「环华边境线 G219→G318」" rows={3} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>兴趣标签（可多选）</Label>
+              <div className="flex flex-wrap gap-2">
+                {INTEREST_TAG_ITEMS.map((tag) => {
+                  const selected = interestTags.includes(tag);
+                  return (
+                    <Button
+                      key={tag}
+                      type="button"
+                      variant={selected ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setValue(
+                          "interestTags",
+                          selected
+                            ? interestTags.filter((t) => t !== tag)
+                            : [...interestTags, tag]
+                        );
+                      }}
+                    >
+                      {tag}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="trip-pref">偏好（可选）</Label>
+              <Textarea id="trip-pref" {...register("preferences")} placeholder="如「每日不超过 300 公里，偏好露营，预算中等」" rows={2} />
             </div>
           </div>
           <DialogFooter>

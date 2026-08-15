@@ -21,15 +21,20 @@ _DEFAULT_MODEL = "gpt-4o-mini"
 _REQUEST_TIMEOUT = 5.0  # slug 是短文本，5 秒足够
 
 
-async def _client(session: AsyncSession) -> AsyncOpenAI | None:
-    """按当前 SiteSetting 构建客户端；未启用或无 key 时返回 None。"""
+async def _client(
+    session: AsyncSession, timeout: float = _REQUEST_TIMEOUT
+) -> AsyncOpenAI | None:
+    """按当前 SiteSetting 构建客户端；未启用或无 key 时返回 None。
+
+    timeout 可覆盖默认值（推荐等长耗时调用用更长超时）。
+    """
     config = await get_site_settings(session=session)
     enabled = config.get("ai_enabled", "")
     api_key = config.get("ai_api_key", "")
     if enabled != "true" or not api_key:
         return None
     base = config.get("ai_api_base", "") or _DEFAULT_BASE
-    return AsyncOpenAI(base_url=base, api_key=api_key, timeout=_REQUEST_TIMEOUT)
+    return AsyncOpenAI(base_url=base, api_key=api_key, timeout=timeout)
 
 
 def _parse_extra_body(raw: str) -> dict | None:
@@ -120,3 +125,74 @@ def _sanitize(raw: str) -> str:
     cleaned = cleaned.strip("-")
     # 限长 200（兼顾各模型最大长度，最宽的是 Post 256）
     return cleaned[:200]
+
+
+def _parse_json(raw: str) -> dict | None:
+    """解析 LLM 返回的 JSON（容忍 markdown 代码块围栏）。"""
+    text = raw.strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text.startswith("json"):
+            text = text[4:]
+        text = text.strip()
+    try:
+        parsed = json.loads(text)
+        return parsed if isinstance(parsed, dict) else None
+    except json.JSONDecodeError:
+        logger.warning("LLM 返回非合法 JSON: %s", raw[:200])
+        return None
+
+
+async def generate_recommendation(
+    *,
+    session: AsyncSession,
+    trip_mode: str,
+    route_plan: str | None,
+    interest_tags: str | None,
+    preferences: str | None,
+    recent_points: list[dict],
+    candidates: list[dict],
+) -> dict | None:
+    """调用 LLM 生成记录点下一程推荐。
+
+    Args:
+        session: 数据库会话（读取 SiteSetting 配置）
+        trip_mode: 交通方式
+        route_plan / interest_tags / preferences: 行程规划信息
+        recent_points: 最近记录点列表（含标题/类型/地名/坐标）
+        candidates: 高德周边搜索候选 POI 列表
+
+    Returns:
+        解析后的推荐 dict（含 next_stop 与 detours），失败返回 None
+    """
+    from app.ai.prompts import RECOMMENDATION_PROMPT
+
+    client = await _client(session, timeout=30.0)
+    if client is None:
+        return None
+
+    config = await get_site_settings(session=session)
+    model = config.get("ai_model", "") or _DEFAULT_MODEL
+    prompt = RECOMMENDATION_PROMPT.format(
+        trip_mode=trip_mode,
+        route_plan=route_plan or "（未填写）",
+        interest_tags=interest_tags or "（未填写）",
+        preferences=preferences or "（未填写）",
+        recent_points=json.dumps(recent_points, ensure_ascii=False),
+        candidates=json.dumps(candidates, ensure_ascii=False),
+    )
+
+    try:
+        response = await client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1000,
+            temperature=0.7,
+            **await _build_kwargs(session),
+        )
+    except Exception as e:
+        logger.warning("LLM recommendation failed: %s", e)
+        return None
+
+    raw = response.choices[0].message.content or ""
+    return _parse_json(raw)

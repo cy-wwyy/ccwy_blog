@@ -20,3 +20,35 @@ Title: {title}
 Language: {lang}
 
 slug:"""
+
+# ── 行程记录点推荐 ────────────────────────────────────
+
+RECOMMENDATION_PROMPT = """\
+你是长途旅行行程规划助手，为旅行者推荐下一程。
+
+【输出要求】只输出一个 JSON 对象，不要 markdown 代码块、不要任何额外文字。JSON 结构如下：
+
+{{
+  "next_stop": {{"name": "...", "reason": "...", "distance_km": 120, "point_type": "town"}},
+  "detours": [{{"name": "...", "reason": "...", "detour_km": 35, "point_type": "scenery", "priority": 1}}]
+}}
+
+字段说明：
+- next_stop：结合主路线和当前进度，推荐的下一个主要停留点；主路线信息不足无法判断时返回 null。
+- detours：从「周边候选景点」里挑最值得绕路去的（最多 5 个），priority 1 最高，detour_km 为距当前点公里数。
+- point_type 取值：town/scenery/landmark/ancient_town/pass/camping/accommodation/gas/repair/supplies/lunch/rest/event/other。
+- reason 用一句话说明推荐理由，贴合旅行者偏好。
+
+【旅行信息】
+交通方式：{trip_mode}
+主路线：{route_plan}
+兴趣标签：{interest_tags}
+偏好：{preferences}
+
+【最近记录点】（按时间顺序，最后一个是当前位置）
+{recent_points}
+
+【周边候选景点】（name=名称 | distance_km=距当前点公里 | address=地址）
+{candidates}
+
+请只输出 JSON。"""
