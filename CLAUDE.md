@@ -42,8 +42,8 @@ backend/app/
 ├── settings/            # SiteSetting(KV表) + 博主资料(读写User表) — models/crud + admin + public
 ├── stats/               # PageView 事件表，埋点去重 + 浏览量/访客量聚合
 ├── storage/             # 抽象基类 + Local + OSS 实现（本地优先读，OSS 回源回填）
-├── ai/                  # OpenAI 兼容 LLM 客户端，配置从 SiteSetting 读（非 .env），运行时热修改
-├── trip/                # 行程记录（摩旅日志）：Trip/TripPoint/TripPointMedia — 高德地图集成 + admin + public
+├── ai/                  # OpenAI 兼容 LLM 客户端（slug 生成 + 行程推荐），配置从 SiteSetting 读（非 .env），运行时热修改
+├── trip/                # 行程记录：Trip/TripPoint/TripPointMedia — 高德地图集成 + admin + public + ai_tasks（异步推荐）
 ├── tools/               # TOTP 2FA 工具
 ```
 
@@ -51,8 +51,9 @@ backend/app/
 - **全异步**：`async def` 路由 + `AsyncSession` + `await` 所有 DB 操作。`session.add()` 不同步 await，`session.exec()` 要先 await 再取值。
 - **RBAC 鉴权**：User → UserRole → Role → RolePermission → Permission。`require_permission(code)` 返回 Depends。路由通过 `_current_user: User = Depends(require_permission("posts:create"))` 保护。
 - **存储双写**：上传同时写本地 + OSS（可选），读取本地优先，本地缺失从 OSS 回源并回填本地。`main.py` 的 `/uploads/{path}` 端点封装此逻辑。
-- **AI 配置**：不走 `.env`，从 `SiteSetting` KV 表读取（`ai_enabled/api_base/api_key/model/reasoning_effort/extra_body`），支持运行时热修改。
+- **AI 配置**：不走 `.env`，从 `SiteSetting` KV 表读取（`ai_enabled/api_base/api_key/model/reasoning_effort/extra_body`），支持运行时热修改。⚠️ `init_db` 不播种 SiteSetting，库重建会静默丢 AI key（表现为 slug 生成/推荐报「AI 未启用」）。
 - **行程记录点**：`Trip` 一对多 `TripPoint`（`point_type` 为 `Literal`，含 `camping`/`rest`/`viewpoint`/`pass` 等）。`trip/helpers.py` 封装高德地图 Web API——地理编码/逆地理编码/驾车路径规划，路线结果缓存在 `TripPoint.polyline_to_next`/`distance_to_next`（米），供前端直接渲染。
+- **AI 行程推荐**：创建记录点（非 `waypoint`）后 `BackgroundTasks` 触发 `trip/ai_tasks.py` 异步生成下一程推荐，结果存 `TripPoint.ai_rec`（JSON）+ `ai_rec_status`（none/pending/ready/failed）。流程 = 高德周边搜索候选 POI → LLM（`ai/client.py` 的 `generate_recommendation`）按偏好决策，输出 `next_stop` + `detours`。两处质量保证：从最近两点坐标算方位角注入 prompt（避免推荐身后已走过的地方），`next_stop` 用 geocode + driving_route 实测距离替换 LLM 估值。行程规划字段（`trip_mode/route_plan/interest_tags/preferences`）存 `Trip` 表，仅后台可见（前台公开不暴露）。
 
 ```
 frontend/src/
@@ -79,6 +80,7 @@ frontend/src/
 - **认证流**：`AuthProvider` 挂载时从 localStorage 恢复 token → `getMe()` 验证 → 注册 401 兜底。`AuthGuard` 包裹所有 admin 页面。
 - **表单**：全站统一 react-hook-form + zod（login、post、分类/标签、设置）。
 - **访问统计**：前端渲染时 `trackView(kind, slug?)` → `POST /track`（fire-and-forget），后端半小时去重。
+- **AI 推荐 UI**：后台行程详情页记录点表格有「AI 推荐」列，图标按 `ai_rec_status` 显示（pending 转圈 / ready ✨ 点击弹窗 / failed 红叹号），存在 pending 点时每 5s 静默轮询刷新。
 
 ## 数据库：Alembic 迁移
 
