@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.core.deps import SessionDep
 from app.trip import crud
-from app.trip.admin_router import _photos_of_point, _trip_to_public
+from app.trip.admin_router import _trip_to_public
 from app.trip.models import (
     TripCard,
     TripPointView,
@@ -17,7 +17,6 @@ router = APIRouter(tags=["trips"])
 
 
 def _point_to_view(point) -> TripPointView:
-    photos = getattr(point, "_photos", [])
     return TripPointView(
         id=point.id,
         title=point.title,
@@ -30,7 +29,6 @@ def _point_to_view(point) -> TripPointView:
         sort_order=point.sort_order,
         polyline_to_next=point.polyline_to_next,
         distance_to_next=point.distance_to_next,
-        photos=photos,
     )
 
 
@@ -96,10 +94,6 @@ async def get_trip(session: SessionDep, slug: str) -> TripView:
     )
 
     points = await crud.list_points_by_trip(session=session, trip_id=trip.id)
-    views: list[TripPointView] = []
-    for p in points:
-        photos = await _photos_of_point(session, p.id)
-        p._photos = photos  # type: ignore[attr-defined]
-        views.append(_point_to_view(p))
+    views = [_point_to_view(p) for p in points]
 
     return TripView(**card.model_dump(), points=views)

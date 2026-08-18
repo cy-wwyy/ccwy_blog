@@ -13,7 +13,6 @@ from app.trip.models import (
     TripCreate,
     TripPoint,
     TripPointCreate,
-    TripPointMedia,
     TripPointUpdate,
     TripUpdate,
 )
@@ -108,9 +107,7 @@ async def delete_trip(*, session: AsyncSession, trip: Trip) -> None:
 async def create_point(
     *, session: AsyncSession, point_in: TripPointCreate
 ) -> TripPoint:
-    media_ids = point_in.media_ids
-    data = point_in.model_dump(exclude={"media_ids"})
-    point = TripPoint.model_validate(data)
+    point = TripPoint.model_validate(point_in)
 
     # 自动补全位置
     await fill_location_auto(point)
@@ -121,16 +118,12 @@ async def create_point(
             point.title = point.location_name or "途经点"
         if not point.arrived_at:
             point.arrived_at = datetime.now(UTC)
+    else:
+        # 非途经点：置待生成状态，由后台任务异步生成推荐
+        point.ai_rec_status = "pending"
 
     session.add(point)
     await session.flush()
-
-    # 关联照片
-    if media_ids:
-        for i, mid in enumerate(media_ids):
-            session.add(
-                TripPointMedia(point_id=point.id, media_id=mid, sort_order=i)
-            )
 
     # 更新前后点的 polyline 缓存
     await update_point_polylines(point, session)
@@ -164,7 +157,6 @@ async def update_point(
     *, session: AsyncSession, db_point: TripPoint, point_in: TripPointUpdate
 ) -> TripPoint:
     data = point_in.model_dump(exclude_unset=True)
-    media_ids = data.pop("media_ids", None)
     loc_changed = (
         "latitude" in data
         or "longitude" in data
@@ -184,24 +176,6 @@ async def update_point(
             db_point.title = db_point.location_name or "途经点"
 
         session.add(db_point)
-
-    # 覆盖式更新关联照片
-    if media_ids is not None:
-        existing = (
-            await session.exec(
-                select(TripPointMedia).where(
-                    TripPointMedia.point_id == db_point.id
-                )
-            )
-        ).all()
-        for pm in existing:
-            await session.delete(pm)
-        for i, mid in enumerate(media_ids):
-            session.add(
-                TripPointMedia(
-                    point_id=db_point.id, media_id=mid, sort_order=i
-                )
-            )
 
     # 位置变了 → 刷新相邻 polyline
     if loc_changed:
@@ -229,17 +203,6 @@ async def delete_point(
     deleted_idx = next(
         (i for i, p in enumerate(all_points) if p.id == point.id), -1
     )
-
-    # 清理关联照片
-    media_rels = (
-        await session.exec(
-            select(TripPointMedia).where(
-                TripPointMedia.point_id == point.id
-            )
-        )
-    ).all()
-    for pm in media_rels:
-        await session.delete(pm)
 
     await session.delete(point)
     await session.flush()

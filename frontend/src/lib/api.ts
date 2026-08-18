@@ -767,7 +767,6 @@ export interface TripPointPublic {
   sort_order: number;
   polyline_to_next: string | null;
   distance_to_next: number | null;
-  photos: string[];
   ai_rec_status: string;
   ai_rec: string | null;
   created_at: string | null;
@@ -807,7 +806,6 @@ export interface TripPointWritePayload {
   longitude?: number | null;
   arrived_at?: string;
   sort_order?: number;
-  media_ids?: string[];
 }
 
 // ── AI 推荐 ──────────────────────────────────────────
@@ -964,7 +962,6 @@ export interface TripPointView {
   sort_order: number;
   polyline_to_next: string | null;
   distance_to_next: number | null;
-  photos: string[];
 }
 
 export interface TripView extends TripCard {

@@ -112,25 +112,6 @@ class TripPoint(SQLModel, table=True):
     )
 
     trip: Optional["Trip"] = Relationship(back_populates="points")
-    photos: list["TripPointMedia"] = Relationship(
-        back_populates="point",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
-    )
-
-
-# ── TripPointMedia 表（记录点关联照片）───────────────────
-
-
-class TripPointMedia(SQLModel, table=True):
-    point_id: str = Field(
-        foreign_key="trippoint.id", ondelete="CASCADE", primary_key=True
-    )
-    media_id: str = Field(
-        foreign_key="media.id", ondelete="CASCADE", primary_key=True
-    )
-    sort_order: int = 0
-
-    point: Optional["TripPoint"] = Relationship(back_populates="photos")
 
 
 # ── Schemas: Trip ─────────────────────────────────────
@@ -224,7 +205,6 @@ class TripPointBase(SQLModel):
 
 class TripPointCreate(TripPointBase):
     trip_id: str
-    media_ids: list[str] = []  # 关联已有媒体
 
 
 class TripPointUpdate(SQLModel):
@@ -236,7 +216,6 @@ class TripPointUpdate(SQLModel):
     longitude: float | None = None
     arrived_at: datetime | None = None
     sort_order: int | None = None
-    media_ids: list[str] | None = None  # 覆盖式更新关联照片
 
 
 class TripPointPublic(SQLModel):
@@ -252,18 +231,9 @@ class TripPointPublic(SQLModel):
     sort_order: int
     polyline_to_next: str | None = None
     distance_to_next: int | None = None
-    photos: list[str] = []  # 照片 URL 列表，由 router 填充
     ai_rec_status: str = "none"
     ai_rec: str | None = None
     created_at: UtcDateTime = None
-
-
-# ── Schemas: TripPointMedia ───────────────────────────
-
-
-class TripPointMediaCreate(SQLModel):
-    media_id: str
-    sort_order: int = 0
 
 
 # ── 前台公开视图 ──────────────────────────────────────
@@ -297,7 +267,6 @@ class TripPointView(SQLModel):
     sort_order: int
     polyline_to_next: str | None = None  # 高德编码 polyline，前端可直接渲染
     distance_to_next: int | None = None
-    photos: list[str] = []  # URL 列表
 
 
 class TripView(TripCard):

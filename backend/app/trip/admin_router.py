@@ -1,5 +1,4 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
-from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.deps import SessionDep, require_permission
@@ -13,7 +12,6 @@ from app.trip.models import (
     TripDetail,
     TripPoint,
     TripPointCreate,
-    TripPointMedia,
     TripPointPublic,
     TripPointUpdate,
     TripPublic,
@@ -36,30 +34,9 @@ def _media_url(path: str | None, thumb_path: str | None = None) -> str | None:
     return None
 
 
-async def _photos_of_point(
-    session: AsyncSession, point_id: str
-) -> list[str]:
-    """返回记录点的照片 URL 列表（按 sort_order）。"""
-    rels = (
-        await session.exec(
-            select(TripPointMedia, Media)
-            .join(Media, TripPointMedia.media_id == Media.id)
-            .where(TripPointMedia.point_id == point_id)
-            .order_by(TripPointMedia.sort_order)
-        )
-    ).all()
-    urls: list[str] = []
-    for _, m in rels:
-        url = _media_url(m.path, m.thumb_path)
-        if url:
-            urls.append(url)
-    return urls
-
-
 async def _point_to_public(
     session: AsyncSession, point: TripPoint
 ) -> TripPointPublic:
-    photos = await _photos_of_point(session, point.id)
     return TripPointPublic(
         id=point.id,
         trip_id=point.trip_id,
@@ -73,7 +50,6 @@ async def _point_to_public(
         sort_order=point.sort_order,
         polyline_to_next=point.polyline_to_next,
         distance_to_next=point.distance_to_next,
-        photos=photos,
         ai_rec_status=point.ai_rec_status,
         ai_rec=point.ai_rec,
         created_at=point.created_at,
@@ -285,25 +261,10 @@ async def admin_create_point(
     _=Depends(require_permission("trip:manage")),
 ) -> TripPointPublic:
     await _get_trip_or_404(session, trip_id)
-    if point_in.media_ids:
-        ids = set(point_in.media_ids)
-        found = (
-            await session.exec(
-                select(Media.id).where(col(Media.id).in_(ids))
-            )
-        ).all()
-        missing = ids - set(found)
-        if missing:
-            raise HTTPException(
-                status_code=400, detail=f"媒体文件不存在: {', '.join(missing)}"
-            )
     point = await crud.create_point(session=session, point_in=point_in)
 
-    # 途经点（纯路线锚点）不生成推荐
+    # 途经点（纯路线锚点）不生成推荐；其余在 create_point 内已置 pending
     if point.point_type != "waypoint":
-        point.ai_rec_status = "pending"
-        session.add(point)
-        await session.commit()
         background_tasks.add_task(generate_recommendation_task, point.id)
 
     return await _point_to_public(session, point)
@@ -320,22 +281,6 @@ async def admin_update_point(
     _=Depends(require_permission("trip:manage")),
 ) -> TripPointPublic:
     point = await _get_point_or_404(session, point_id, trip_id)
-    if point_in.media_ids is not None:
-        ids = set(point_in.media_ids)
-        if ids:
-            found = set(
-                (
-                    await session.exec(
-                        select(Media.id).where(col(Media.id).in_(ids))
-                    )
-                ).all()
-            )
-            missing = ids - found
-            if missing:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"媒体文件不存在: {', '.join(missing)}",
-                )
     point = await crud.update_point(
         session=session, db_point=point, point_in=point_in
     )
