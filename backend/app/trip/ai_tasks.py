@@ -93,20 +93,27 @@ async def _build_recommendation(
                 "下一站必须沿此方向推荐前方地点，不要推荐身后已走过的地方。"
             )
 
-    # 2. 高德周边搜索候选 POI
+    # 2. 高德周边搜索候选 POI（风景名胜 + 露营地/营地两路，合并去重）
     candidates: list[dict] = []
     if point.latitude is not None and point.longitude is not None:
         radius = TRIP_MODE_RADIUS.get(trip.trip_mode, 100_000)
-        pois = await search_nearby_poi(point.longitude, point.latitude, radius)
-        if pois:
-            candidates = [
-                {
+        seen: set[str] = set()
+        for types, keywords in (("110000", None), (None, "营地")):
+            pois = await search_nearby_poi(
+                point.longitude, point.latitude, radius,
+                types=types, keywords=keywords,
+            )
+            if not pois:
+                continue
+            for p in pois:
+                if p["name"] in seen:
+                    continue
+                seen.add(p["name"])
+                candidates.append({
                     "name": p["name"],
                     "distance_km": round((p["distance_m"] or 0) / 1000, 1),
                     "address": p["address"] or "",
-                }
-                for p in pois
-            ]
+                })
 
     # 3. LLM 决策
     result = await client.generate_recommendation(

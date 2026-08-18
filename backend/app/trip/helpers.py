@@ -142,14 +142,19 @@ async def driving_route(
 
 
 async def search_nearby_poi(
-    lng: float, lat: float, radius: int, types: str = "110000"
+    lng: float,
+    lat: float,
+    radius: int,
+    types: str = "110000",
+    keywords: str | None = None,
 ) -> list[dict] | None:
     """高德周边搜索 POI，供 AI 推荐候选。
 
     Args:
         lng, lat: 中心点经纬度
         radius: 搜索半径（米）
-        types: 高德 POI 分类编码，默认 110000（风景名胜）
+        types: 高德 POI 分类编码，默认 110000（风景名胜）；传 None 则不按分类过滤
+        keywords: 关键词（如"营地"），传 None 则不按关键词过滤
 
     Returns:
         精简后的 POI 列表 [{name, address, distance_m, lng, lat}] 或 None
@@ -158,11 +163,14 @@ async def search_nearby_poi(
         **_key_params(),
         "location": f"{lng},{lat}",
         "radius": str(radius),
-        "types": types,
         "offset": "20",
         "page": "1",
         "extensions": "base",
     }
+    if types:
+        params["types"] = types
+    if keywords:
+        params["keywords"] = keywords
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(f"{_AMAP_BASE}/place/around", params=params)
