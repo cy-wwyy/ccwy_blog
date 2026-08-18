@@ -229,7 +229,6 @@ class TripPointPublic(SQLModel):
     longitude: float | None = None
     arrived_at: UtcDateTime = None
     sort_order: int
-    polyline_to_next: str | None = None
     distance_to_next: int | None = None
     ai_rec_status: str = "none"
     ai_rec: str | None = None

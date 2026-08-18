@@ -48,7 +48,6 @@ async def _point_to_public(
         longitude=point.longitude,
         arrived_at=point.arrived_at,
         sort_order=point.sort_order,
-        polyline_to_next=point.polyline_to_next,
         distance_to_next=point.distance_to_next,
         ai_rec_status=point.ai_rec_status,
         ai_rec=point.ai_rec,

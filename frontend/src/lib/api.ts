@@ -765,7 +765,6 @@ export interface TripPointPublic {
   longitude: number | null;
   arrived_at: string | null;
   sort_order: number;
-  polyline_to_next: string | null;
   distance_to_next: number | null;
   ai_rec_status: string;
   ai_rec: string | null;
