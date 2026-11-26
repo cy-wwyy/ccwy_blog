@@ -7,6 +7,7 @@ from app.api.login import router as login_router
 from app.blog.admin_categories import router as categories_admin_router
 from app.blog.admin_router import router as blog_admin_router
 from app.blog.admin_tags import router as tags_admin_router
+from app.blog.feed_router import router as feed_router
 from app.blog.public_router import posts_router as blog_posts_router
 from app.blog.public_router import router as blog_public_router
 from app.media.admin_router import router as media_admin_router
@@ -22,6 +23,7 @@ api_router = APIRouter()
 api_router.include_router(login_router)
 api_router.include_router(blog_public_router)
 api_router.include_router(blog_posts_router)
+api_router.include_router(feed_router)
 api_router.include_router(blog_admin_router)
 api_router.include_router(categories_admin_router)
 api_router.include_router(tags_admin_router)

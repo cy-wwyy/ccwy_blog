@@ -17,6 +17,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ccwy blog",
   description: "一个个人博客",
+  alternates: {
+    // 让浏览器/阅读器自动发现 RSS 订阅源（地址栏会出现订阅图标）
+    types: {
+      "application/rss+xml": [{ url: "/api/v1/feed", title: "RSS 订阅" }],
+    },
+  },
 };
 
 export default function RootLayout({

@@ -53,7 +53,7 @@ export function SiteFooter() {
 
         <div className="flex items-center gap-4">
           <Link
-            href="/api/feed/rss"
+            href="/api/v1/feed"
             target="_blank"
             className="text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1.5 text-sm"
           >
