@@ -357,7 +357,28 @@ export interface MediaUploadResult {
   size: number;
   module: string;
   synced_to_oss: boolean;
+  /** 后端按内容 SHA-256 去重命中时为 true（返回的是已存在的同内容文件） */
+  deduped?: boolean;
   created_at: string | null;
+}
+
+export interface MediaListResponse {
+  data: MediaUploadResult[];
+  count: number;
+}
+
+export async function fetchAdminMedia(
+  token: string,
+  params?: { skip?: number; limit?: number; module?: string }
+): Promise<MediaListResponse> {
+  const qs = new URLSearchParams();
+  if (params?.skip) qs.set("skip", String(params.skip));
+  if (params?.limit) qs.set("limit", String(params.limit));
+  if (params?.module) qs.set("module", params.module);
+  const q = qs.toString();
+  return request<MediaListResponse>(`/admin/media${q ? "?" + q : ""}`, {
+    headers: authHeaders(token),
+  });
 }
 
 export async function uploadMedia(
@@ -641,7 +662,13 @@ export interface PublicAuthor {
   website: string | null;
 }
 
-export interface PublicSiteInfo extends SiteSettings {
+/** 公开站点信息：后端只返回这几个字段。
+ *  不要继承 SiteSettings —— 那会把 ai_api_key 等后台密钥假设成公开字段。 */
+export interface PublicSiteInfo {
+  site_title: string;
+  site_subtitle: string;
+  footer_text: string;
+  icp: string;
   author: PublicAuthor;
 }
 
@@ -673,6 +700,50 @@ export interface PostViewStat {
   title: string;
   slug: string;
   views: number;
+}
+
+export interface DailyStat {
+  date: string; // YYYY-MM-DD（本地时区）
+  views: number;
+  visitors: number;
+}
+
+export interface HourlyStat {
+  weekday: number; // 0=周一 … 6=周日
+  hour: number; // 0..23
+  views: number;
+}
+
+/** 按日聚合的 PV/UV 序列（缺失日期由后端补 0）。 */
+export async function fetchStatsDaily(
+  token: string,
+  params?: { days?: number; kind?: "site" | "post" | "album" }
+): Promise<DailyStat[]> {
+  const qs = new URLSearchParams();
+  if (params?.days) qs.set("days", String(params.days));
+  if (params?.kind) qs.set("kind", params.kind);
+  const q = qs.toString();
+  const res = await request<{ data: DailyStat[] }>(
+    `/admin/stats/daily${q ? "?" + q : ""}`,
+    { headers: authHeaders(token) }
+  );
+  return res.data;
+}
+
+/** 星期 × 小时 的访问热力，共 168 格。 */
+export async function fetchStatsHourly(
+  token: string,
+  params?: { days?: number; kind?: "site" | "post" | "album" }
+): Promise<HourlyStat[]> {
+  const qs = new URLSearchParams();
+  if (params?.days) qs.set("days", String(params.days));
+  if (params?.kind) qs.set("kind", params.kind);
+  const q = qs.toString();
+  const res = await request<{ data: HourlyStat[] }>(
+    `/admin/stats/hourly${q ? "?" + q : ""}`,
+    { headers: authHeaders(token) }
+  );
+  return res.data;
 }
 
 export async function fetchStatsOverview(

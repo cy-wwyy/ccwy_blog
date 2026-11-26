@@ -57,7 +57,7 @@ export function AdminTable({
 }: AdminTableProps) {
   return (
     <div className="flex flex-1 flex-col space-y-2">
-      <div className="rounded-lg border">
+      <div className="overflow-x-auto rounded-lg border">
         <Table className="[&_td]:py-[10px]">
           {header}
           <TableBody>
@@ -96,6 +96,7 @@ export function AdminTable({
                   e.preventDefault();
                   if (page > 1) onPageChange(page - 1);
                 }}
+                text="上一页"
               />
             </PaginationItem>
             {getPageItems(page, totalPages).map((item, i) =>
@@ -125,6 +126,7 @@ export function AdminTable({
                   e.preventDefault();
                   if (page < totalPages) onPageChange(page + 1);
                 }}
+                text="下一页"
               />
             </PaginationItem>
           </PaginationContent>

@@ -203,3 +203,182 @@
   white-space: normal !important;
 }
 
+
+/* ═══════════════════════════════════════════════════════════════
+   Nova 后台主题（P1）
+   ─────────────────────────────────────────────────────────────
+   作用域隔离：只有 [data-admin-root] 下的组件读这套变量，
+   前台的 :root / .dark 一个字节不改，光斑毛玻璃不受影响。
+
+   做法是「映射到 shadcn 已有的语义变量名」，而不是另起一套 ——
+   这样 card / button / table / dialog 等 24 个组件零改动自动换肤。
+   ═══════════════════════════════════════════════════════════════ */
+
+[data-admin-root] {
+  --background: #eceef2;          /* canvas 页面底 */
+  --foreground: #23262e;          /* ink 主文字 */
+
+  --card: #ffffff;                /* island 卡片 */
+  --card-foreground: #23262e;
+  --popover: #ffffff;
+  --popover-foreground: #23262e;
+
+  --primary: #3e6ef3;             /* brand */
+  --primary-foreground: #ffffff;
+
+  --secondary: #f2f3f6;           /* sunken 分段器底 */
+  --secondary-foreground: #23262e;
+
+  --muted: #f8f9fb;               /* surface */
+  --muted-foreground: #9a98a8;    /* 标签灰 */
+
+  --accent: #e9f0ff;              /* brand-soft 激活底 */
+  --accent-foreground: #3e6ef3;
+
+  --destructive: #f04768;
+  --border: #eef0f4;
+  --input: #e2e5ec;
+  --ring: #3e6ef3;
+
+  --chart-1: #3e6ef3;
+  --chart-2: #3e9bf3;
+  --chart-3: #f04768;
+  --chart-4: #2ed47a;
+  --chart-5: #f5a623;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #23262e;
+  --sidebar-primary: #3e6ef3;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e9f0ff;
+  --sidebar-accent-foreground: #3e6ef3;
+  --sidebar-border: #eef0f4;
+  --sidebar-ring: #3e6ef3;
+
+  /* 15px 基准 → lg=控件 15、xl=卡片 21，和参考稿的 14/22 对齐 */
+  --radius: 0.9375rem;
+
+  /* Nova 自有色板：后续外壳/图表用 */
+  --nova-canvas: #eceef2;
+  --nova-island: #ffffff;
+  --nova-surface: #f8f9fb;
+  --nova-sunken: #f2f3f6;
+  --nova-ink: #23262e;
+  --nova-ink-soft: #4c515d;
+  --nova-muted: #9a98a8;
+  --nova-faint: #b9bcc6;
+  --nova-line: #eef0f4;
+  --nova-line-strong: #e2e5ec;
+  --nova-brand: #3e6ef3;
+  --nova-brand-soft: #e9f0ff;
+  --nova-rise: #f04768;
+  --nova-fall: #3e9bf3;
+  --nova-mint: #2ed47a;
+  --nova-amber: #f5a623;
+  --nova-shadow-island: 0 30px 70px -34px rgba(23, 31, 53, 0.22),
+    0 3px 10px rgba(23, 31, 53, 0.03);
+}
+
+/* 暗色：同一个作用域，brand 提亮保证对比度；ink 偏蓝而非纯白，避免发光刺眼 */
+html.dark [data-admin-root],
+html[data-admin-root].dark {
+  --background: #131519;
+  --foreground: #e9ebf0;
+
+  --card: #1b1e24;
+  --card-foreground: #e9ebf0;
+  --popover: #1b1e24;
+  --popover-foreground: #e9ebf0;
+
+  --primary: #5b85f7;
+  --primary-foreground: #0f1420;
+
+  --secondary: #262a32;
+  --secondary-foreground: #e9ebf0;
+
+  --muted: #22262d;
+  --muted-foreground: #7f8592;
+
+  --accent: #1e2a45;
+  --accent-foreground: #a8c0ff;
+
+  --destructive: #ff6b85;
+  --border: #2a2e36;
+  --input: #363b45;
+  --ring: #5b85f7;
+
+  --chart-1: #5b85f7;
+  --chart-2: #55acf7;
+  --chart-3: #ff6b85;
+  --chart-4: #3fd98a;
+  --chart-5: #f7b346;
+
+  --sidebar: #1b1e24;
+  --sidebar-foreground: #e9ebf0;
+  --sidebar-primary: #5b85f7;
+  --sidebar-primary-foreground: #0f1420;
+  --sidebar-accent: #262a32;
+  --sidebar-accent-foreground: #e9ebf0;
+  --sidebar-border: #2a2e36;
+  --sidebar-ring: #5b85f7;
+
+  --nova-canvas: #131519;
+  --nova-island: #1b1e24;
+  --nova-surface: #22262d;
+  --nova-sunken: #262a32;
+  --nova-ink: #e9ebf0;
+  --nova-ink-soft: #b7bcc7;
+  --nova-muted: #7f8592;
+  --nova-faint: #5c6270;
+  --nova-line: #2a2e36;
+  --nova-line-strong: #363b45;
+  --nova-brand: #5b85f7;
+  --nova-brand-soft: #1e2a45;
+  --nova-rise: #ff6b85;
+  --nova-fall: #55acf7;
+  --nova-mint: #3fd98a;
+  --nova-amber: #f7b346;
+  --nova-shadow-island: 0 30px 70px -34px rgba(0, 0, 0, 0.6),
+    0 3px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   P5 列表页统一：只作用于后台，前台的 h1 / 表格 / 徽章不受影响
+   ───────────────────────────────────────────────────────────── */
+
+[data-admin-root] h1 {
+  font-size: 1.625rem; /* 26px */
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+/* 表头：更小、更淡、定高，和 Nova 的“静默表头”一致 */
+[data-admin-root] thead th {
+  height: 40px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--nova-muted);
+}
+
+/* 表格行：略收紧，悬浮时用主色极浅底 */
+[data-admin-root] tbody tr {
+  height: 46px;
+}
+[data-admin-root] tbody tr:hover {
+  background-color: color-mix(in oklab, var(--nova-brand) 4%, transparent);
+}
+
+/* 徽章：药丸 → 6px 圆角小标签 */
+[data-admin-root] [data-slot="badge"] {
+  height: 22px;
+  padding-inline: 7px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+/* 列表容器圆角对齐卡片 */
+[data-admin-root] .rounded-lg.border {
+  border-radius: 18px;
+}
