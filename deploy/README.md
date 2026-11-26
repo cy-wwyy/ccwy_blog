@@ -120,3 +120,29 @@ tail -f ~/logs/ccwy-web.log               # 单元里配了日志重定向
 | **重启方式** | 部署脚本 kill 进程，靠 systemd `Restart=always` 拉起；不需要 sudo |
 | **保留 5 个版本** | 自动清理更旧的 release，避免磁盘堆积 |
 | **健康检查** | 每次发布后 curl `127.0.0.1:3000`，30 秒内不通自动回滚 |
+
+## 常见坑
+
+**密钥加到了 Variables 而不是 Secrets**
+
+`Settings → Secrets and variables → Actions` 页面顶部有两个标签：`Secrets` 和
+`Variables`。两者的区别：
+
+| | Secrets | Variables |
+|---|---|---|
+| 值是否可见 | 永不回显 | 明文显示 |
+| 引用方式 | `${{ secrets.X }}` | `${{ vars.X }}` |
+| 日志 | 自动打码 `***` | 明文输出 |
+
+加到 Variables 之后 `secrets.X` 解析为空，表现为 Build 步骤 0 秒失败（被空值
+校验拦下）。私钥务必放 Secrets。
+
+**密钥加到了 Environment 而不是仓库级**
+
+环境级（`Settings → Environments → <名字> → Secrets`）只有在 job 里声明
+`environment: <名字>` 时可见。本工作流已声明。
+
+**空提交不会触发部署**
+
+工作流有 `paths` 过滤，只监听 `frontend/**`、`deploy/**` 和工作流文件本身。
+空提交不改文件，不会触发；需要手动 `workflow_dispatch` 或改上述路径下的文件。
