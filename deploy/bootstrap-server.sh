@@ -62,8 +62,8 @@ cat <<EOF
 
 验证线上是否切换成功：
 
-  readlink -f ~/$APP_DIR/current
-  cat ~/$APP_DIR/current/BUILD_INFO
+  readlink -f $APP_DIR/current
+  cat $APP_DIR/current/BUILD_INFO
   curl -I http://127.0.0.1:3000/
 
 旧目录 ~/code/ccwy_blog/frontend/node_modules 确认新版跑通后可以删掉，能省几百 MB。
