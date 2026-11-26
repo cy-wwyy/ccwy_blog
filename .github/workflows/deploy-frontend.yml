@@ -81,9 +81,26 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST }}
         run: |
           set -euo pipefail
+
+          # 提前给出可读的错误，而不是让 ssh 抛 "invalid format"
+          case "$SSH_PRIVATE_KEY" in
+            *"BEGIN OPENSSH PRIVATE KEY"*|*"BEGIN RSA PRIVATE KEY"*|*"BEGIN EC PRIVATE KEY"*) ;;
+            *) echo "::error::SSH_PRIVATE_KEY 格式不对：必须包含完整的 -----BEGIN ... PRIVATE KEY----- / -----END ... PRIVATE KEY----- 两行"; exit 1 ;;
+          esac
+          case "$SSH_PRIVATE_KEY" in
+            *"END OPENSSH PRIVATE KEY"*|*"END RSA PRIVATE KEY"*|*"END EC PRIVATE KEY"*) ;;
+            *) echo "::error::SSH_PRIVATE_KEY 缺少 -----END ... PRIVATE KEY----- 结尾行，可能粘贴时被截断"; exit 1 ;;
+          esac
+          case "$SSH_PRIVATE_KEY" in
+            "-----BEGIN"*) ;;
+            *) echo "::error::SSH_PRIVATE_KEY 开头有杂字符（空格/引号/换行），应以 -----BEGIN 开头"; exit 1 ;;
+          esac
+
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+          ssh-keygen -l -f ~/.ssh/deploy_key >/dev/null || {
+            echo "::error::写出的私钥无法解析，请确认粘贴的是完整的私钥文件内容"; exit 1; }
           # 首次连接记录 host key，防止中间人
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
