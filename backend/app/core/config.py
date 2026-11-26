@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     # 必填，从环境读取 — 保证多 worker / 重启后签名密钥稳定
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
+    # 统计聚合使用的本地时区偏移（小时）。SQLite 存的是 UTC 裸时间，
+    # 按天/按小时分桶时需要先加上这个偏移，否则「今日」会从 UTC 零点算起。
+    # 切 PostgreSQL 时换成 date_trunc('day', created_at AT TIME ZONE tz) 即可。
+    STATS_TZ_OFFSET_HOURS: int = 8
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
 
     # 允许跨域的来源（逗号分隔）。非 local 环境必须显式配置，禁止通配符 *

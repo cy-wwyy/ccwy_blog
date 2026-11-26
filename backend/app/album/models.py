@@ -4,6 +4,7 @@ from typing import Optional
 from sqlalchemy import DateTime, Text
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.core.types import UtcDateTime
 from app.core.utils import generate_ulid, get_datetime_utc
 
 # ── Album 表 ──────────────────────────────────────────
@@ -106,8 +107,8 @@ class AlbumPublic(AlbumBase):
     cover_url: str | None = None  # 封面 media 的 url，router 填充
     photo_count: int = 0
     views: int = 0  # 浏览量（半小时去重），由 stats 聚合填充
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
+    created_at: UtcDateTime = None
+    updated_at: UtcDateTime = None
 
 
 class AlbumDetail(AlbumPublic):
@@ -137,8 +138,8 @@ class AlbumCard(SQLModel):
     cover_url: str | None = None
     photo_count: int = 0
     views: int = 0
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
+    created_at: UtcDateTime = None
+    updated_at: UtcDateTime = None
 
 
 class AlbumView(AlbumCard):

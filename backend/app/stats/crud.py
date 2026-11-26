@@ -1,5 +1,5 @@
 import hashlib
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, func, select
@@ -7,7 +7,12 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.blog.models import Post
 from app.core.config import settings
-from app.stats.models import PageView, PostViewStat
+from app.stats.models import (
+    DailyStat,
+    HourlyStat,
+    PageView,
+    PostViewStat,
+)
 
 _SLOT_SECONDS = 1800  # 半小时去重窗口
 
@@ -114,11 +119,25 @@ async def visitors_total(*, session: AsyncSession) -> int:
     return (await session.exec(stmt)).one()
 
 
+def local_day_start_utc(now: datetime | None = None) -> datetime:
+    """当前**本地日**零点对应的 UTC 时刻。
+
+    SQLite 存的是 UTC 裸时间，直接 `now.replace(hour=0)` 截的是 UTC 零点，
+    在东八区会把 00:00–08:00 的访问算进"昨天"。这里统一按
+    STATS_TZ_OFFSET_HOURS 折算，与 daily_stats 的按日分桶口径保持一致。
+    """
+    now = now or datetime.now(UTC)
+    offset = timedelta(hours=settings.STATS_TZ_OFFSET_HOURS)
+    local_midnight = (now + offset).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    return local_midnight - offset
+
+
 async def visitors_today(
     *, session: AsyncSession, now: datetime | None = None
 ) -> int:
-    now = now or datetime.now(UTC)
-    start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    start = local_day_start_utc(now)
     stmt = select(func.count(func.distinct(PageView.visitor_key))).where(
         PageView.kind == "site", PageView.created_at >= start
     )
@@ -143,4 +162,84 @@ async def post_view_stats(
     return [
         PostViewStat(id=r.id, title=r.title, slug=r.slug, views=r.views)
         for r in rows
+    ]
+
+
+# ── 时序聚合（后台图表）─────────────────────────────────────
+#
+# 数据库当前是 SQLite，存的是 UTC 裸时间字符串。按「本地日/小时」分桶必须先
+# 加时区偏移再截断，所以用 SQLite 的 date()/strftime() + modifier。
+# 切 PostgreSQL 时把这两个 helper 换成 date_trunc / EXTRACT 即可，调用方不用动。
+
+
+def _tz_modifier() -> str:
+    """SQLite 修饰符，例如 '+8 hours'。"""
+    offset = settings.STATS_TZ_OFFSET_HOURS
+    return f"{offset:+d} hours"
+
+
+def _local_today() -> date:
+    return (datetime.now(UTC) + timedelta(hours=settings.STATS_TZ_OFFSET_HOURS)).date()
+
+
+def _since_utc(days: int) -> datetime:
+    """覆盖最近 days 个本地日的 UTC 起点（多取一天容错，Python 侧再裁剪）。"""
+    local_start = datetime.combine(
+        _local_today() - timedelta(days=days - 1), datetime.min.time()
+    )
+    return local_start - timedelta(hours=settings.STATS_TZ_OFFSET_HOURS)
+
+
+async def daily_stats(
+    *, session: AsyncSession, days: int = 30, kind: str = "site"
+) -> list[DailyStat]:
+    """按本地日聚合 PV/UV，缺失的日期补 0，保证前端拿到连续序列。"""
+    day = func.date(PageView.created_at, _tz_modifier()).label("day")
+    stmt = (
+        select(
+            day,
+            func.count().label("views"),
+            func.count(func.distinct(PageView.visitor_key)).label("visitors"),
+        )
+        .where(PageView.kind == kind, PageView.created_at >= _since_utc(days))
+        .group_by(day)
+        .order_by(day)
+    )
+    rows = (await session.exec(stmt)).all()
+    bucket = {str(d): (int(v), int(u)) for d, v, u in rows}
+
+    today = _local_today()
+    out: list[DailyStat] = []
+    for i in range(days - 1, -1, -1):
+        key = (today - timedelta(days=i)).isoformat()
+        views, visitors = bucket.get(key, (0, 0))
+        out.append(DailyStat(date=key, views=views, visitors=visitors))
+    return out
+
+
+async def hourly_stats(
+    *, session: AsyncSession, days: int = 7, kind: str = "site"
+) -> list[HourlyStat]:
+    """按「星期 × 小时」聚合，产出 7×24=168 格的热力数据（缺失补 0）。"""
+    mod = _tz_modifier()
+    wd = func.strftime("%w", PageView.created_at, mod).label("wd")  # 0=周日
+    hr = func.strftime("%H", PageView.created_at, mod).label("hr")
+    stmt = (
+        select(wd, hr, func.count().label("views"))
+        .where(PageView.kind == kind, PageView.created_at >= _since_utc(days))
+        .group_by(wd, hr)
+        .order_by(wd, hr)
+    )
+    rows = (await session.exec(stmt)).all()
+
+    bucket: dict[tuple[int, int], int] = {}
+    for w, h, n in rows:
+        # SQLite 的 0=周日 → 转成 0=周一 的常规口径
+        weekday = (int(w) + 6) % 7
+        bucket[(weekday, int(h))] = int(n)
+
+    return [
+        HourlyStat(weekday=d, hour=h, views=bucket.get((d, h), 0))
+        for d in range(7)
+        for h in range(24)
     ]

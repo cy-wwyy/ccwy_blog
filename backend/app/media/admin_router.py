@@ -11,13 +11,13 @@ from io import BytesIO
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from PIL import Image
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import select
+from sqlmodel import col, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 from app.core.deps import CurrentUser, SessionDep, require_permission
-from app.core.models import Media
-from app.media.schemas import MediaPublic
+from app.core.models import Media, User
+from app.media.schemas import MediaListPublic, MediaPublic
 from app.storage import storage
 
 logger = logging.getLogger(__name__)
@@ -211,3 +211,24 @@ async def upload_media(
         raise
     await session.refresh(media)
     return _to_public(media, deduped=False)
+
+
+@router.get("", response_model=MediaListPublic)
+async def list_media(
+    session: SessionDep,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(30, ge=1, le=100),
+    module: str | None = Query(default=None, description="按归属模块过滤"),
+    _: User = Depends(require_permission("media:manage")),
+) -> MediaListPublic:
+    """媒体库列表：按上传时间倒序，可按模块过滤。"""
+    items_stmt = select(Media)
+    count_stmt = select(func.count()).select_from(Media)
+    if module:
+        items_stmt = items_stmt.where(Media.module == module)
+        count_stmt = count_stmt.where(Media.module == module)
+
+    items_stmt = items_stmt.order_by(col(Media.created_at).desc()).offset(skip).limit(limit)
+    items = (await session.exec(items_stmt)).all()
+    count = (await session.exec(count_stmt)).one()
+    return MediaListPublic(data=[_to_public(m) for m in items], count=count)

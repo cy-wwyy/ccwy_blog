@@ -58,3 +58,30 @@ class PostViewStat(SQLModel):
 
 class PostViewStats(SQLModel):
     data: list[PostViewStat]
+
+
+# ── 聚合 Schemas（后台图表用）────────────────────────
+
+
+class DailyStat(SQLModel):
+    """一天的量：views=PV，visitors=UV（visitor_key 去重）"""
+
+    date: str  # YYYY-MM-DD（本地时区）
+    views: int
+    visitors: int
+
+
+class DailyStats(SQLModel):
+    data: list[DailyStat]
+
+
+class HourlyStat(SQLModel):
+    """时段热力的一格：weekday 0=周一 … 6=周日，hour 0..23"""
+
+    weekday: int
+    hour: int
+    views: int
+
+
+class HourlyStats(SQLModel):
+    data: list[HourlyStat]

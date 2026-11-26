@@ -22,4 +22,11 @@ async def public_site_info(session: SessionDep) -> PublicSiteInfo:
         )
     else:
         author = PublicAuthor()
-    return PublicSiteInfo(**site, author=author)
+    # 显式白名单，绝不 `**site` 整包透传（防止再次把 ai_* 带出去）
+    return PublicSiteInfo(
+        site_title=site.get("site_title", ""),
+        site_subtitle=site.get("site_subtitle", ""),
+        footer_text=site.get("footer_text", ""),
+        icp=site.get("icp", ""),
+        author=author,
+    )

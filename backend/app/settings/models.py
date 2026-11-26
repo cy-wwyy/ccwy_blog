@@ -93,5 +93,16 @@ class PublicAuthor(SQLModel):
     website: str | None = None
 
 
-class PublicSiteInfo(SiteSettingsRead):
+class PublicSiteInfo(SQLModel):
+    """公开站点信息：只暴露前台真正需要的字段。
+
+    注意：这里**不能**继承 ``SiteSettingsRead``。之前就是继承导致的泄露 ——
+    ``ai_api_key`` / ``ai_api_base`` 等后台密钥被匿名接口原样序列化出去。
+    以后新增设置项默认不进这个 schema，要公开必须显式加字段。
+    """
+
+    site_title: str = ""
+    site_subtitle: str = ""
+    footer_text: str = ""
+    icp: str = ""
     author: PublicAuthor

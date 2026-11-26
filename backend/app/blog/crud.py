@@ -13,7 +13,7 @@ from app.blog.models import (
 )
 
 # 排序白名单 — 模块级常量，避免每次调用重复创建
-_ALLOWED_SORT_COLUMNS = {"created_at", "updated_at", "title"}
+_ALLOWED_SORT_COLUMNS = {"created_at", "updated_at", "published_at", "title"}
 
 # 分类层级上限（根=1，最多三层）
 MAX_CATEGORY_DEPTH = 3

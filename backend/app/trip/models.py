@@ -1,21 +1,11 @@
-from datetime import UTC, date, datetime
-from typing import Annotated, Literal, Optional
+from datetime import date, datetime
+from typing import Literal, Optional
 
-from pydantic import BeforeValidator, model_validator
+from pydantic import model_validator
 from sqlalchemy import DateTime, Text
 
-
-def _ensure_utc(v: object) -> datetime | None:
-    """将 naive datetime 强制设为 UTC，确保 JSON 序列化带 Z 后缀。"""
-    if v is None:
-        return None
-    if isinstance(v, datetime) and v.tzinfo is None:
-        return v.replace(tzinfo=UTC)
-    return v  # type: ignore[return-value]
-
-
 # 响应 schema 中所有 datetime 字段统一使用此类型，避免 SQLite 丢失时区
-UtcDateTime = Annotated[datetime | None, BeforeValidator(_ensure_utc)]
+from app.core.types import UtcDateTime
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.core.utils import generate_ulid, get_datetime_utc

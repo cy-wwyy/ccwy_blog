@@ -17,3 +17,8 @@ class MediaPublic(SQLModel):
     # 是否命中去重（true=返回的是已存在的同内容文件）
     deduped: bool = False
     created_at: datetime | None = None
+
+
+class MediaListPublic(SQLModel):
+    data: list[MediaPublic]
+    count: int

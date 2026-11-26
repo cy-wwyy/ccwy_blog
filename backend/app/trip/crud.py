@@ -107,17 +107,20 @@ async def delete_trip(*, session: AsyncSession, trip: Trip) -> None:
 async def create_point(
     *, session: AsyncSession, point_in: TripPointCreate
 ) -> TripPoint:
-    point = TripPoint.model_validate(point_in)
+    # arrived_at 在入参里是可选的，但表列是 NOT NULL。
+    # 直接 model_validate(point_in) 会把显式的 None 带进去并校验失败（500），
+    # 所以先补默认值再构造（前端清空时间输入时正好会传 undefined）。
+    data = point_in.model_dump()
+    if not data.get("arrived_at"):
+        data["arrived_at"] = datetime.now(UTC)
+    point = TripPoint.model_validate(data)
 
     # 自动补全位置
     await fill_location_auto(point)
 
     # 途经点：只要求坐标，标题/地名由后端自动补全
-    if point.point_type == "waypoint":
-        if not (point.title or "").strip():
-            point.title = point.location_name or "途经点"
-        if not point.arrived_at:
-            point.arrived_at = datetime.now(UTC)
+    if point.point_type == "waypoint" and not (point.title or "").strip():
+        point.title = point.location_name or "途经点"
     else:
         # 非途经点：置待生成状态，由后台任务异步生成推荐
         point.ai_rec_status = "pending"

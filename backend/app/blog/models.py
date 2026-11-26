@@ -4,6 +4,7 @@ from typing import Literal, Optional
 from sqlalchemy import DateTime, Text
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.core.types import UtcDateTime
 from app.core.utils import generate_ulid, get_datetime_utc
 
 # 文章发布状态 — 收敛为有限取值，避免拼写错误导致 public 层静默隐藏
@@ -187,9 +188,9 @@ class PostPublic(SQLModel):
     allow_comments: bool
     author_id: str
     category_id: str | None = None
-    published_at: datetime | None = None
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
+    published_at: UtcDateTime = None
+    created_at: UtcDateTime = None
+    updated_at: UtcDateTime = None
     views: int = 0  # 浏览量（半小时去重），由 stats 聚合填充
 
 
