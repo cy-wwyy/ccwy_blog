@@ -8,7 +8,9 @@ on:
     branches: [main]
     paths:
       - "frontend/**"
-      - "deploy/**"
+      - "deploy/deploy-remote.sh"
+      - "deploy/blog-frontend.service"
+      - "deploy/bootstrap-server.sh"
       - ".github/workflows/deploy-frontend.yml"
   workflow_dispatch:
 

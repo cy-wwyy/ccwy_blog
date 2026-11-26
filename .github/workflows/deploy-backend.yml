@@ -1,0 +1,91 @@
+name: Deploy Backend
+
+# 后端不需要构建：源码直接跑。流程是 git 对齐 → 迁移 → 重启 → 健康检查。
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "deploy/deploy-backend.sh"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # 与前端工作流共用同一个 Environment 里的 secrets
+    environment: SSH_PRIVATE_KEY
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check SSH secrets present
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          set -euo pipefail
+          [ -n "$SSH_HOST" ] || { echo "::error::SSH_HOST 为空"; exit 1; }
+          [ -n "$SSH_USER" ] || { echo "::error::SSH_USER 为空"; exit 1; }
+          [ -n "$SSH_PRIVATE_KEY" ] || { echo "::error::SSH_PRIVATE_KEY 为空"; exit 1; }
+
+      - name: Validate SSH key format
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          case "$SSH_PRIVATE_KEY" in
+            *"BEGIN OPENSSH PRIVATE KEY"*|*"BEGIN RSA PRIVATE KEY"*|*"BEGIN EC PRIVATE KEY"*) ;;
+            *) echo "::error::SSH_PRIVATE_KEY 缺少 BEGIN 行"; exit 1 ;;
+          esac
+          case "$SSH_PRIVATE_KEY" in
+            *"END OPENSSH PRIVATE KEY"*|*"END RSA PRIVATE KEY"*|*"END EC PRIVATE KEY"*) ;;
+            *) echo "::error::SSH_PRIVATE_KEY 缺少 END 行"; exit 1 ;;
+          esac
+
+      - name: Write SSH key and probe host
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          PORT="${SSH_PORT:-22}"
+          ssh -i ~/.ssh/deploy_key -p "$PORT" -o BatchMode=yes -o ConnectTimeout=15 \
+            "$SSH_USER@$SSH_HOST" 'echo "ssh ok: $(hostname)"'
+
+      - name: Upload and run deploy script
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          set -euo pipefail
+          PORT="${SSH_PORT:-22}"
+          scp -i ~/.ssh/deploy_key -P "$PORT" deploy/deploy-backend.sh \
+            "$SSH_USER@$SSH_HOST:/tmp/deploy-backend.sh"
+          ssh -i ~/.ssh/deploy_key -p "$PORT" "$SSH_USER@$SSH_HOST" \
+            'bash /tmp/deploy-backend.sh'
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Backend deploy"
+            echo ""
+            echo "| 项 | 值 |"
+            echo "|---|---|"
+            echo "| commit | \`${{ github.sha }}\` |"
+            echo "| 结果 | ${{ job.status }} |"
+          } >> "$GITHUB_STEP_SUMMARY"

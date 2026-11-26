@@ -186,3 +186,24 @@ tail -f ~/logs/ccwy-web.log               # 单元里配了日志重定向
 
 `dist` 分支每次是一个**孤立提交**并强制覆盖，所以历史不会无限增长；
 服务器侧每次 `rm -rf` 后重新 `git init` + `fetch --depth 1`，避免浅克隆的状态问题。
+
+## 后端部署
+
+后端不需要构建，所以流程短得多：
+
+```
+push(backend/**) → Actions → ssh → deploy-backend.sh
+                                    ├─ git fetch + reset --hard origin/main
+                                    ├─ 备份 ccwy_blog.db
+                                    ├─ alembic upgrade head
+                                    ├─ kill uvicorn（systemd 自动拉起）
+                                    └─ 健康检查（/api/v1/site-settings）
+```
+
+- 迁移前自动备份数据库，保留最近 5 份
+- 迁移失败 → 代码回退，**不重启**，线上仍是旧版本
+- 健康检查失败 → 代码回退 + 重启（注意：数据库迁移不会自动回滚）
+- 同样不需要 sudo，靠 `Restart=always` 拉起
+
+手动执行：`bash /tmp/deploy-backend.sh`（脚本由 workflow 上传），或本地
+`scp deploy/deploy-backend.sh ecs-user@host:/tmp && ssh ... 'bash /tmp/deploy-backend.sh'`。
