@@ -83,34 +83,65 @@ jobs:
           tar -czf "$GITHUB_WORKSPACE/ccwy-web.tar.gz" .
           ls -lh "$GITHUB_WORKSPACE/ccwy-web.tar.gz"
 
-      - name: Configure SSH
+      - name: Check SSH secrets present
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
         run: |
           set -euo pipefail
+          [ -n "$SSH_HOST" ] || { echo "::error::SSH_HOST 为空或未添加"; exit 1; }
+          [ -n "$SSH_USER" ] || { echo "::error::SSH_USER 为空或未添加"; exit 1; }
+          [ -n "$SSH_PRIVATE_KEY" ] || { echo "::error::SSH_PRIVATE_KEY 为空 —— 大概率加到了 Variables 标签下，应加到 Secrets 标签下"; exit 1; }
+          echo "三个 SSH 凭据均已读取"
 
-          # 提前给出可读的错误，而不是让 ssh 抛 "invalid format"
+      - name: Validate SSH key format
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
           case "$SSH_PRIVATE_KEY" in
             *"BEGIN OPENSSH PRIVATE KEY"*|*"BEGIN RSA PRIVATE KEY"*|*"BEGIN EC PRIVATE KEY"*) ;;
-            *) echo "::error::SSH_PRIVATE_KEY 格式不对：必须包含完整的 -----BEGIN ... PRIVATE KEY----- / -----END ... PRIVATE KEY----- 两行"; exit 1 ;;
+            *) echo "::error::SSH_PRIVATE_KEY 缺少 -----BEGIN ... PRIVATE KEY----- 行，粘贴不完整"; exit 1 ;;
           esac
           case "$SSH_PRIVATE_KEY" in
             *"END OPENSSH PRIVATE KEY"*|*"END RSA PRIVATE KEY"*|*"END EC PRIVATE KEY"*) ;;
-            *) echo "::error::SSH_PRIVATE_KEY 缺少 -----END ... PRIVATE KEY----- 结尾行，可能粘贴时被截断"; exit 1 ;;
+            *) echo "::error::SSH_PRIVATE_KEY 缺少 -----END ... PRIVATE KEY----- 行，可能被截断"; exit 1 ;;
           esac
           case "$SSH_PRIVATE_KEY" in
             "-----BEGIN"*) ;;
             *) echo "::error::SSH_PRIVATE_KEY 开头有杂字符（空格/引号/换行），应以 -----BEGIN 开头"; exit 1 ;;
           esac
+          echo "私钥首尾标记完整"
 
+      - name: Write SSH key and probe host
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          set -euo pipefail
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keygen -l -f ~/.ssh/deploy_key >/dev/null || {
-            echo "::error::写出的私钥无法解析，请确认粘贴的是完整的私钥文件内容"; exit 1; }
-          # 首次连接记录 host key，防止中间人
+          # 私钥能否被解析（能解析说明内容完整、未被破坏）
+          ssh-keygen -l -f ~/.ssh/deploy_key || {
+            echo "::error::写出的私钥无法解析，内容可能被破坏"; exit 1; }
+          # 记录 host key，防止中间人
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          echo "host key 已记录"
+
+      - name: Probe SSH login
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          set -euo pipefail
+          PORT="${SSH_PORT:-22}"
+          # 真正登录一次，验证公钥已加入服务器 authorized_keys
+          ssh -i ~/.ssh/deploy_key -p "$PORT" -o BatchMode=yes -o ConnectTimeout=15 \
+            "$SSH_USER@$SSH_HOST" 'echo "ssh ok: $(hostname)"' || {
+            echo "::error::SSH 登录失败 —— 私钥与服务器 authorized_keys 中的公钥不匹配，或 SSH_USER/SSH_PORT 有误"; exit 1; }
 
       - name: Upload artifact
         env:
