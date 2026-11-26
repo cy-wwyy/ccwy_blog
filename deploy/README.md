@@ -146,3 +146,24 @@ tail -f ~/logs/ccwy-web.log               # 单元里配了日志重定向
 
 工作流有 `paths` 过滤，只监听 `frontend/**`、`deploy/**` 和工作流文件本身。
 空提交不改文件，不会触发；需要手动 `workflow_dispatch` 或改上述路径下的文件。
+
+## 必需的 Secrets 清单（自查）
+
+| 名称 | 必填 | 值 |
+|---|---|---|
+| `SSH_HOST` | ✅ | `120.79.123.93` |
+| `SSH_USER` | ✅ | `ecs-user` |
+| `SSH_PRIVATE_KEY` | ✅ | 私钥全文，含 BEGIN/END |
+| `NEXT_PUBLIC_AMAP_KEY` | ✅ | 高德 Key |
+| `NEXT_PUBLIC_AMAP_SECRET` | ✅ | 高德安全密钥 |
+| `SSH_PORT` | 可选 | 默认 22 |
+
+缺任何一个都会在对应步骤失败，且步骤名会直接指出缺哪一类：
+
+| 失败步骤 | 含义 |
+|---|---|
+| `Check SSH secrets present` | `SSH_HOST` / `SSH_USER` / `SSH_PRIVATE_KEY` 有空值 |
+| `Validate SSH key format` | 私钥缺 BEGIN/END 或被截断 |
+| `Write SSH key and probe host` | 私钥无法解析 |
+| `Probe SSH login` | 私钥与服务器 `authorized_keys` 不匹配 |
+| `Build` | AMAP 两个 key 为空 |
