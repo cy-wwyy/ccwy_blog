@@ -1,0 +1,38 @@
+# ccwy_blog 前端 systemd 单元（standalone 产物版）
+#
+# 与旧版的区别：
+#   WorkingDirectory → ~/apps/ccwy-web/current（指向当前 release 的软链接）
+#   ExecStart        → node server.js（standalone 自带依赖，不再用 next start）
+#   HOSTNAME         → 127.0.0.1，只监听本机，由 nginx 对外
+#
+# 安装：
+#   sudo cp deploy/blog-frontend.service /etc/systemd/system/blog-frontend.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl restart blog-frontend
+
+[Unit]
+Description=ccwy Blog Frontend (Next.js standalone)
+After=network.target
+# 部署靠 kill 触发重启，取消启动频率限制，避免连续发布被 rate limit 拦住
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=ecs-user
+WorkingDirectory=/home/ecs-user/apps/ccwy-web/current
+ExecStart=/usr/bin/node server.js
+# 部署脚本用 kill 触发重启，这里必须允许自动拉起
+Restart=always
+RestartSec=3
+
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=127.0.0.1
+# 上传/接口由 nginx 反代，这里不需要额外变量；
+# NEXT_PUBLIC_* 已在构建时内联进产物。
+
+StandardOutput=append:/home/ecs-user/logs/ccwy-web.log
+StandardError=append:/home/ecs-user/logs/ccwy-web.log
+
+[Install]
+WantedBy=multi-user.target

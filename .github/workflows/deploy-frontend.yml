@@ -1,0 +1,127 @@
+name: Deploy Frontend
+
+# 只在 main 分支的前端变更时部署；也支持手动触发。
+# 构建跑在 GitHub 的 x86_64 runner 上 —— 这是关键：开发机是 ARM64，
+# 直接本地构建的产物（尤其 sharp 这类原生模块）在 x86 服务器上跑不起来。
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - "deploy/**"
+      - ".github/workflows/deploy-frontend.yml"
+  workflow_dispatch:
+
+# 同一时间只允许一个部署，避免并发覆盖
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: false
+
+env:
+  # 与服务器保持一致，避免 Node 版本差异带来的意外
+  NODE_VERSION: "22"
+  APP_DIR: apps/ccwy-web
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        env:
+          # NEXT_PUBLIC_* 在构建时被内联进产物，必须在这里注入
+          NEXT_PUBLIC_AMAP_KEY: ${{ secrets.NEXT_PUBLIC_AMAP_KEY }}
+          NEXT_PUBLIC_AMAP_SECRET: ${{ secrets.NEXT_PUBLIC_AMAP_SECRET }}
+          # 生产由 nginx 直接反代 /api 到后端，这条 rewrite 实际不参与；
+          # 设成内网地址是为了万一走到也能用
+          BACKEND_URL: http://127.0.0.1:8000
+        run: npm run build
+
+      - name: Assemble standalone bundle
+        working-directory: frontend
+        run: |
+          set -euo pipefail
+          # standalone 不包含静态资源，必须手动补进产物目录
+          cp -r public .next/standalone/public
+          cp -r .next/static .next/standalone/.next/static
+          # 记录构建信息，便于线上排查是哪个 commit
+          cat > .next/standalone/BUILD_INFO <<EOF
+          commit=$(git rev-parse HEAD 2>/dev/null || echo unknown)
+          ref=${{ github.ref_name }}
+          run=${{ github.run_id }}
+          built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          node=$(node -v)
+          EOF
+          du -sh .next/standalone
+
+      - name: Package
+        working-directory: frontend/.next/standalone
+        run: |
+          set -euo pipefail
+          tar -czf "$GITHUB_WORKSPACE/ccwy-web.tar.gz" .
+          ls -lh "$GITHUB_WORKSPACE/ccwy-web.tar.gz"
+
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # 首次连接记录 host key，防止中间人
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Upload artifact
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          set -euo pipefail
+          PORT="${SSH_PORT:-22}"
+          ssh -i ~/.ssh/deploy_key -p "$PORT" "$SSH_USER@$SSH_HOST" \
+            "mkdir -p ~/$APP_DIR/incoming ~/$APP_DIR/releases"
+          scp -i ~/.ssh/deploy_key -P "$PORT" ccwy-web.tar.gz \
+            "$SSH_USER@$SSH_HOST:~/$APP_DIR/incoming/${{ github.sha }}.tar.gz"
+          scp -i ~/.ssh/deploy_key -P "$PORT" deploy/deploy-remote.sh \
+            "$SSH_USER@$SSH_HOST:~/$APP_DIR/deploy-remote.sh"
+
+      - name: Activate release
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          set -euo pipefail
+          PORT="${SSH_PORT:-22}"
+          ssh -i ~/.ssh/deploy_key -p "$PORT" "$SSH_USER@$SSH_HOST" \
+            "bash ~/$APP_DIR/deploy-remote.sh '${{ github.sha }}'"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Frontend deploy"
+            echo ""
+            echo "| 项 | 值 |"
+            echo "|---|---|"
+            echo "| commit | \`${{ github.sha }}\` |"
+            echo "| branch | \`${{ github.ref_name }}\` |"
+            echo "| 结果 | ${{ job.status }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
