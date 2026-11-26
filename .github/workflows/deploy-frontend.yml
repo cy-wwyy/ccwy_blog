@@ -26,6 +26,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # 密钥配在 Environment 里（Settings → Environments），
+    # 不声明 environment 的话 job 读不到这些值，${{ secrets.X }} 会拿到空
+    environment: SSH_PRIVATE_KEY
 
     steps:
       - uses: actions/checkout@v4
