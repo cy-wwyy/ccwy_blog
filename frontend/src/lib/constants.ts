@@ -3,6 +3,13 @@
 /** url-friendly slug 格式：小写字母/数字，以单个连字符分隔 */
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+/** 表单里的 slug 允许先留空（提交时由 AI 补全或提示），但非空时必须是合法格式。
+ *  直接用 .regex(SLUG_PATTERN) 会把空串也判错，导致补全逻辑永远执行不到。 */
+export const SLUG_MESSAGE = "slug 只能包含小写字母、数字和连字符";
+export function isValidSlug(v: string): boolean {
+  return v === "" || SLUG_PATTERN.test(v);
+}
+
 /** localStorage 中存放 JWT 的键名 */
 export const TOKEN_KEY = "ccwy_blog_token";
 

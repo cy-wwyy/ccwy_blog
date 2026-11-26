@@ -30,11 +30,27 @@ export function BlogList() {
   const categorySlug = searchParams.get("category") ?? "";
   const search = searchParams.get("search") ?? "";
   const [categories, setCategories] = useState<CategoryPublic[]>([]);
+  // 用显式状态区分「还没加载」和「加载失败/空」——之前用 categories.length===0
+  // 判断，接口一失败就永远等下去，正文卡在骨架屏。
+  const [categoriesStatus, setCategoriesStatus] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
 
   useEffect(() => {
+    let active = true;
     fetchPublicCategories()
-      .then(setCategories)
-      .catch(() => {});
+      .then((cs) => {
+        if (!active) return;
+        setCategories(cs);
+        setCategoriesStatus("ready");
+      })
+      .catch(() => {
+        if (!active) return;
+        setCategoriesStatus("error");
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const catNameMap = useMemo(
@@ -48,14 +64,24 @@ export function BlogList() {
       ? activeCategory.name
       : "全部文章";
 
-  // 带分类筛选但分类尚未加载 → 先等，避免误拉全量
-  const waitingCategory = categorySlug !== "" && categories.length === 0;
+  // 仅在「分类确实还在加载」时等待；失败则降级为全量，不再无限骨架屏
+  const waitingCategory = categorySlug !== "" && categoriesStatus === "loading";
+  // 分类已加载完但找不到这个 slug（分类被改名/删除后的旧链接）
+  const missingCategory =
+    categorySlug !== "" &&
+    categoriesStatus === "ready" &&
+    !activeCategory;
 
   return (
     <div className="pb-8">
       <div className="flex items-center justify-between mb-4 px-4">
         <h2 className="text-sm font-semibold text-muted-foreground">{heading}</h2>
       </div>
+      {missingCategory && (
+        <p className="px-4 pb-3 text-xs text-muted-foreground">
+          分类「{categorySlug}」不存在或已移除，下面显示全部文章。
+        </p>
+      )}
       {waitingCategory ? (
         <ResultsSkeleton />
       ) : (

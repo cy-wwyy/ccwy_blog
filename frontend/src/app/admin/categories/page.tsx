@@ -31,10 +31,9 @@ import {
 } from "@/components/ui/select";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminTable } from "@/components/admin/admin-table";
 import { SlugInput, useAutoFillSlug } from "@/components/admin/slug-input";
-import { PAGE_SIZE, SLUG_PATTERN } from "@/lib/constants";
+import { PAGE_SIZE, isValidSlug, SLUG_MESSAGE } from "@/lib/constants";
 import {
   fetchCategories,
   createCategory,
@@ -52,9 +51,7 @@ import {
 
 const itemSchema = z.object({
   name: z.string().min(1, "请输入名称"),
-  slug: z
-    .string()
-    .regex(SLUG_PATTERN, "slug 只能包含小写字母、数字和连字符"),
+  slug: z.string().refine(isValidSlug, SLUG_MESSAGE),
   description: z.string(),
   parentId: z.string(),
 });
@@ -261,7 +258,6 @@ export default function CategoriesPage() {
     <div className="flex flex-1 flex-col space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <SidebarTrigger className="-ml-1" />
           <Tabs value={tab} onValueChange={(val) => setTab(val ?? "categories")}>
             <TabsList>
               <TabsTrigger value="categories">分类</TabsTrigger>

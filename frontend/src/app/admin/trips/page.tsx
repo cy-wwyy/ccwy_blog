@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, MapPin } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -113,7 +112,6 @@ export default function AdminTripsPage() {
     <div className="flex flex-1 flex-col space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <SidebarTrigger className="-ml-1" />
           <h1 className="text-2xl font-bold">行程</h1>
         </div>
         <Button size="sm" onClick={openCreate}>

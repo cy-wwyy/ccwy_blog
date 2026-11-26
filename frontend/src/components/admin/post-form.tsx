@@ -16,19 +16,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowLeft } from "lucide-react";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { CoverUpload } from "@/components/admin/cover-upload";
 import { SlugInput, useAutoFillSlug } from "@/components/admin/slug-input";
 import { useAuth } from "@/hooks/use-auth";
-import { POST_STATUS, SLUG_PATTERN, type PostStatus } from "@/lib/constants";
+import { POST_STATUS, isValidSlug, SLUG_MESSAGE, type PostStatus } from "@/lib/constants";
 import type { CategoryPublic, TagPublic } from "@/lib/api";
 
 const postSchema = z.object({
   title: z.string().min(1, "请输入标题"),
   // .min(1) 不在此校验——提交时先由 AI 自动补全，补全失败再提示手动填写
-  slug: z
-    .string()
-    .regex(SLUG_PATTERN, "slug 只能包含小写字母、数字和连字符"),
+  slug: z.string().refine(isValidSlug, SLUG_MESSAGE),
   excerpt: z.string(),
   cover: z.string(),
   content: z.string(),
@@ -138,7 +135,6 @@ export function PostForm({
   return (
     <div className="flex flex-1 flex-col space-y-2">
       <div className="flex items-center gap-2 shrink-0">
-        <SidebarTrigger className="-ml-1" />
         <Button variant="ghost" size="icon" aria-label="返回" onClick={onBack}>
           <ArrowLeft className="size-4" />
         </Button>

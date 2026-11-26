@@ -33,7 +33,6 @@ import {
   Lock,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -373,7 +372,6 @@ export default function AlbumDetailPage() {
     <div className="flex flex-1 flex-col space-y-4">
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <SidebarTrigger className="-ml-1" />
           <Button
             variant="ghost"
             size="icon"

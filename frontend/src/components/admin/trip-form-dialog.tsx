@@ -26,12 +26,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SlugInput, useAutoFillSlug } from "@/components/admin/slug-input";
-import { SLUG_PATTERN } from "@/lib/constants";
+import { isValidSlug, SLUG_MESSAGE } from "@/lib/constants";
 import { createTrip, updateTrip, type TripPublic } from "@/lib/api";
 
 const tripSchema = z.object({
   title: z.string().min(1, "请输入标题"),
-  slug: z.string().regex(SLUG_PATTERN, "slug 只能包含小写字母、数字和连字符"),
+  slug: z.string().refine(isValidSlug, SLUG_MESSAGE),
   description: z.string(),
   startDate: z.string(),
   endDate: z.string(),

@@ -62,6 +62,9 @@ export function TripMapFullscreen() {
   const [loading, setLoading] = useState(true);
   const [hovered, setHovered] = useState<{ point: TripPointView; x: number; y: number } | null>(null);
   const [isReplaying, setIsReplaying] = useState(false);
+  // 地图 SDK 加载失败（未配置 key / 网络被拦 / 配额用尽）时给出兜底 UI，
+  // 否则页面中间是一块永久空白，控制台只有 AMap 报错。
+  const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -81,19 +84,26 @@ export function TripMapFullscreen() {
     let cancelled = false;
 
     (async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const AMapLoader = (await import("@amap/amap-jsapi-loader")) as any;
+      try {
+        const key = process.env.NEXT_PUBLIC_AMAP_KEY || "";
+        if (!key) {
+          setMapError("未配置高德地图 Key（NEXT_PUBLIC_AMAP_KEY），地图无法显示");
+          return;
+        }
 
-      (window as unknown as Record<string, unknown>)._AMapSecurityConfig = {
-        securityJsCode: process.env.NEXT_PUBLIC_AMAP_SECRET || "",
-      };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const AMapLoader = (await import("@amap/amap-jsapi-loader")) as any;
 
-      const AMapModule: typeof AMap = await AMapLoader.default.load({
-        key: process.env.NEXT_PUBLIC_AMAP_KEY || "",
-        version: "2.0",
-      });
+        (window as unknown as Record<string, unknown>)._AMapSecurityConfig = {
+          securityJsCode: process.env.NEXT_PUBLIC_AMAP_SECRET || "",
+        };
 
-      if (cancelled || !containerRef.current) return;
+        const AMapModule: typeof AMap = await AMapLoader.default.load({
+          key,
+          version: "2.0",
+        });
+
+        if (cancelled || !containerRef.current) return;
 
       amapModuleRef.current = AMapModule;
 
@@ -207,6 +217,13 @@ export function TripMapFullscreen() {
       });
 
       // Keep default China overview — don't auto-zoom to markers
+      } catch (err) {
+        if (cancelled) return;
+        console.error("[trip-map] 地图初始化失败", err);
+        setMapError(
+          err instanceof Error ? `地图加载失败：${err.message}` : "地图加载失败"
+        );
+      }
     })();
 
     return () => { cancelled = true; };
@@ -395,6 +412,16 @@ export function TripMapFullscreen() {
       {/* Map */}
       <div className="flex-1 relative">
         <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+
+        {mapError && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-background/95 text-center px-6">
+            <p className="text-sm font-medium">地图无法显示</p>
+            <p className="max-w-md text-xs text-muted-foreground">{mapError}</p>
+            <p className="text-xs text-muted-foreground">
+              行程文字内容与时间轴不受影响，仍可正常查看。
+            </p>
+          </div>
+        )}
 
         {/* Top overlay */}
         <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-background/90 via-background/60 to-transparent pb-4 pt-3 px-4">

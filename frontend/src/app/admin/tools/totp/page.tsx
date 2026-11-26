@@ -14,7 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { fetchTotp } from "@/lib/api";
 
@@ -96,7 +95,6 @@ export default function TotpToolPage() {
   return (
     <div className="flex flex-1 flex-col space-y-4">
       <div className="flex items-center gap-2">
-        <SidebarTrigger className="-ml-1" />
         <h1 className="text-lg font-semibold">2FA 验证码</h1>
       </div>
 

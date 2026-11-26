@@ -6,7 +6,6 @@ import Image from "next/image";
 import { toast } from "sonner";
 import { ImageIcon, Plus, MoreVertical, Edit, Trash2, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -106,7 +105,6 @@ export default function AlbumsPage() {
     <div className="flex flex-1 flex-col space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <SidebarTrigger className="-ml-1" />
           <h1 className="text-2xl font-bold">相册</h1>
         </div>
         <Button size="sm" onClick={openCreate}>

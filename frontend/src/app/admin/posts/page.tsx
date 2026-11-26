@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { VditorPreview } from "@/components/editor/vditor-preview";
 import {
   TableHead,
@@ -158,7 +157,6 @@ export default function PostsPage() {
     <div className="flex flex-1 flex-col space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <SidebarTrigger className="-ml-1" />
           <h1 className="text-2xl font-bold">文章管理</h1>
         </div>
         <Button size="sm" onClick={() => router.push("/admin/posts/new")}>
@@ -268,9 +266,7 @@ export default function PostsPage() {
               <Badge variant="outline">{post.category_id ? (catNameMap[post.category_id] || "-") : "-"}</Badge>
             </td>
             <td className="text-center pl-3.5">
-              <Badge variant={POST_STATUS_META[post.status]?.variant ?? "outline"}>
-                {POST_STATUS_META[post.status]?.label ?? post.status}
-              </Badge>
+              <StatusPill status={post.status} />
             </td>
             <td className="text-center pl-3.5 text-muted-foreground">
               {formatDate(post.updated_at)}
@@ -332,9 +328,7 @@ export default function PostsPage() {
           {previewPost ? (
             <>
               <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground -mt-1 mb-2">
-                <Badge variant={POST_STATUS_META[previewPost.status]?.variant ?? "outline"}>
-                  {POST_STATUS_META[previewPost.status]?.label ?? previewPost.status}
-                </Badge>
+                <StatusPill status={previewPost.status} />
                 <span className="inline-flex items-center gap-1">
                   <Clock size={13} />
                   {formatDate(previewPost.published_at ?? previewPost.created_at)}
@@ -356,5 +350,29 @@ export default function PostsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+
+/** 后台状态徽章：已发布 mint、草稿灰，和仪表盘保持同一套语义色 */
+function StatusPill({ status }: { status: string }) {
+  const published = status === POST_STATUS.PUBLISHED;
+  return (
+    <span
+      className={
+        published
+          ? "inline-flex h-[22px] items-center gap-1 rounded-[6px] px-1.5 text-[11px] font-semibold text-[var(--nova-mint)] bg-[color-mix(in_oklab,var(--nova-mint)_14%,transparent)]"
+          : "inline-flex h-[22px] items-center gap-1 rounded-[6px] px-1.5 text-[11px] font-semibold text-muted-foreground bg-secondary"
+      }
+    >
+      <span
+        className={
+          published
+            ? "size-[5px] rounded-full bg-[var(--nova-mint)]"
+            : "size-[5px] rounded-full bg-[var(--nova-faint)]"
+        }
+      />
+      {POST_STATUS_META[status]?.label ?? status}
+    </span>
   );
 }

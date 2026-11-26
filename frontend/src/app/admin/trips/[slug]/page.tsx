@@ -7,7 +7,6 @@ import {
   Plus, ArrowLeft, Edit, Trash2, Loader2, Sparkles, AlertCircle,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -189,7 +188,6 @@ export default function AdminTripDetailPage() {
       {/* 顶部：返回 + 标题 + 操作 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <SidebarTrigger className="-ml-1" />
           <Button variant="ghost" size="icon" onClick={() => router.push("/admin/trips")} aria-label="返回">
             <ArrowLeft className="size-5" />
           </Button>

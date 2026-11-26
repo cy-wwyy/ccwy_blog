@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -17,7 +17,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { getSiteSettings, updateSiteSettings } from "@/lib/api";
@@ -44,6 +43,11 @@ function errorMessage(err: unknown, fallback: string): string {
 export default function SiteSettingsPage() {
   const { token } = useAuth();
   const [loading, setLoading] = useState(true);
+  // 加载失败时禁止编辑：否则用户在一片空表单上点保存，会把 ai_api_key 等
+  // 服务端已有值全部覆盖成空串（已发生过的数据丢失路径）。
+  const [loadError, setLoadError] = useState<string | null>(null);
+  // 加载成功时的快照，保存时只提交「改过的字段」，避免误伤未渲染/未返回的字段
+  const loadedRef = useRef<FormValues | null>(null);
 
   const {
     register,
@@ -70,26 +74,45 @@ export default function SiteSettingsPage() {
 
   const aiEnabled = useWatch({ control, name: "ai_enabled" });
 
-  useEffect(() => {
-    if (!token) return;
+  const load = useCallback(() => {
+    if (!token) return () => {};
     let active = true;
+    setLoading(true);
+    setLoadError(null);
     getSiteSettings(token)
       .then((s) => {
         if (!active) return;
+        loadedRef.current = s as FormValues;
         reset(s);
       })
-      .catch((e) => active && toast.error(errorMessage(e, "加载失败")))
+      .catch((e) => {
+        if (!active) return;
+        setLoadError(errorMessage(e, "加载失败"));
+        toast.error(errorMessage(e, "加载设置失败，表单已锁定"));
+      })
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
   }, [token, reset]);
 
+  useEffect(() => load(), [load]);
+
   const onSubmit = async (values: FormValues) => {
     if (!token) return;
+    // 只提交与加载快照不同的字段：未渲染/未返回的字段不会被写成空值
+    const base = loadedRef.current;
+    const diff: Partial<FormValues> = {};
+    for (const key of Object.keys(values) as (keyof FormValues)[]) {
+      if (!base || values[key] !== base[key]) diff[key] = values[key];
+    }
+    if (Object.keys(diff).length === 0) {
+      toast.info("没有修改");
+      return;
+    }
     try {
-      const saved = await updateSiteSettings(token, values);
-      // values 兜底，saved 覆盖：防止服务器未返回某字段时被 reset 清空
+      const saved = await updateSiteSettings(token, diff);
+      loadedRef.current = { ...values, ...saved } as FormValues;
       reset({ ...values, ...saved });
       toast.success("已保存");
     } catch (e) {
@@ -100,7 +123,6 @@ export default function SiteSettingsPage() {
   return (
     <div className="flex flex-1 flex-col space-y-4">
       <div className="flex items-center gap-2">
-        <SidebarTrigger className="-ml-1" />
         <h1 className="text-lg font-semibold">网页设置</h1>
       </div>
 
@@ -110,6 +132,21 @@ export default function SiteSettingsPage() {
             <Skeleton className="h-9 w-full" />
             <Skeleton className="h-9 w-full" />
             <Skeleton className="h-20 w-full" />
+          </CardContent>
+        </Card>
+      ) : loadError ? (
+        <Card className="max-w-2xl">
+          <CardHeader>
+            <CardTitle>加载失败</CardTitle>
+            <CardDescription>
+              没能读取现有设置。为避免覆盖已有配置（含 AI Key），表单已锁定。
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">{loadError}</p>
+            <Button type="button" onClick={() => load()}>
+              重试
+            </Button>
           </CardContent>
         </Card>
       ) : (

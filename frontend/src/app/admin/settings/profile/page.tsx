@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -19,7 +19,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -65,28 +64,41 @@ export default function ProfileSettingsPage() {
   });
 
   const displayName = useWatch({ control, name: "display_name" });
+  // 加载失败时锁定表单，避免用空值覆盖已有头像/资料
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const loadedRef = useRef<FormValues | null>(null);
 
-  useEffect(() => {
-    if (!token) return;
+  const load = useCallback(() => {
+    if (!token) return () => {};
     let active = true;
+    setLoading(true);
+    setLoadError(null);
     getProfileSettings(token)
       .then((p) => {
         if (!active) return;
         setAvatar(p.avatar);
         setIsOwner(p.is_owner);
-        reset({
+        const values: FormValues = {
           display_name: p.display_name ?? "",
           bio: p.bio ?? "",
           github: p.github ?? "",
           website: p.website ?? "",
-        });
+        };
+        loadedRef.current = values;
+        reset(values);
       })
-      .catch((e) => active && toast.error(errorMessage(e, "加载失败")))
+      .catch((e) => {
+        if (!active) return;
+        setLoadError(errorMessage(e, "加载失败"));
+        toast.error(errorMessage(e, "加载资料失败，表单已锁定"));
+      })
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
   }, [token, reset]);
+
+  useEffect(() => load(), [load]);
 
   const handleAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -108,15 +120,25 @@ export default function ProfileSettingsPage() {
 
   const onSubmit = async (values: FormValues) => {
     if (!token) return;
+    const base = loadedRef.current;
+    const diff: Partial<FormValues> = {};
+    for (const key of Object.keys(values) as (keyof FormValues)[]) {
+      if (!base || values[key] !== base[key]) diff[key] = values[key];
+    }
+    if (Object.keys(diff).length === 0) {
+      toast.info("没有修改");
+      return;
+    }
     try {
+      // 不提交 avatar：头像由上传接口单独维护，避免这里用旧 state 覆盖新头像
       const saved = await updateProfileSettings(token, {
-        display_name: values.display_name,
-        bio: values.bio || null,
-        github: values.github || null,
-        website: values.website || null,
-        avatar,
+        ...(diff.display_name !== undefined && { display_name: diff.display_name }),
+        ...(diff.bio !== undefined && { bio: diff.bio || null }),
+        ...(diff.github !== undefined && { github: diff.github || null }),
+        ...(diff.website !== undefined && { website: diff.website || null }),
       });
       setAvatar(saved.avatar);
+      loadedRef.current = { ...values };
       toast.success("已保存");
     } catch (e) {
       toast.error(errorMessage(e, "保存失败"));
@@ -126,7 +148,6 @@ export default function ProfileSettingsPage() {
   return (
     <div className="flex flex-1 flex-col space-y-4">
       <div className="flex items-center gap-2">
-        <SidebarTrigger className="-ml-1" />
         <h1 className="text-lg font-semibold">博主设置</h1>
         {isOwner && <Badge variant="secondary">博主</Badge>}
       </div>
@@ -144,6 +165,16 @@ export default function ProfileSettingsPage() {
               <Skeleton className="h-20 w-20 rounded-full" />
               <Skeleton className="h-9 w-full" />
               <Skeleton className="h-20 w-full" />
+            </div>
+          ) : loadError ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                没能读取现有资料，为避免覆盖头像与简介，表单已锁定。
+              </p>
+              <p className="text-xs text-muted-foreground">{loadError}</p>
+              <Button type="button" onClick={() => load()}>
+                重试
+              </Button>
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
