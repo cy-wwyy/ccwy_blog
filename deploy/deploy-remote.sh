@@ -89,7 +89,21 @@ esac
 
 SHA="$1"
 TARBALL="$APP_DIR/incoming/$SHA.tar.gz"
-[ -f "$TARBALL" ] || fail "找不到产物：$TARBALL"
+REPO="$APP_DIR/repo"
+GIT_REMOTE="${GIT_REMOTE:-git@github.com:cy-wwyy/ccwy_blog.git}"
+
+# 从 dist 分支拉产物。
+# 方向很重要：境内机器「下载」GitHub 实测 ~259KB/s，
+# 而 GitHub runner「上传」到境内只有 ~17KB/s，差一个数量级。
+log "从 dist 分支拉取产物…"
+rm -rf "$REPO"
+mkdir -p "$REPO" "$APP_DIR/incoming"
+git -C "$REPO" init -q
+git -C "$REPO" remote add origin "$GIT_REMOTE"
+git -C "$REPO" fetch -q --depth 1 origin dist || fail "拉取 dist 分支失败（检查服务器到 GitHub 的 SSH 通路）"
+git -C "$REPO" show FETCH_HEAD:ccwy-web.tar.gz > "$TARBALL" 2>/dev/null \
+  || fail "dist 分支里没有 ccwy-web.tar.gz"
+log "产物大小：$(du -h "$TARBALL" | cut -f1)"
 
 STAMP="$(date +%Y%m%d-%H%M%S)"
 TARGET="$RELEASES/${STAMP}-${SHA:0:7}"
@@ -99,6 +113,10 @@ mkdir -p "$TARGET"
 tar -xzf "$TARBALL" -C "$TARGET"
 
 [ -f "$TARGET/server.js" ] || fail "产物里没有 server.js，构建步骤可能没生成 standalone"
+
+# 记录构建信息（dist 分支里带的 COMMIT_INFO）
+git -C "$REPO" show FETCH_HEAD:COMMIT_INFO > "$TARGET/BUILD_INFO" 2>/dev/null \
+  || echo "sha=$SHA" > "$TARGET/BUILD_INFO"
 
 # 记录上一个版本，供回滚
 if [ -L "$CURRENT" ]; then

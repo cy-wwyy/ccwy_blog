@@ -17,6 +17,10 @@ concurrency:
   group: deploy-frontend
   cancel-in-progress: false
 
+permissions:
+  # 需要写 contents 才能把产物推到 dist 分支
+  contents: write
+
 env:
   # 与服务器保持一致，避免 Node 版本差异带来的意外
   NODE_VERSION: "22"
@@ -143,7 +147,28 @@ jobs:
             "$SSH_USER@$SSH_HOST" 'echo "ssh ok: $(hostname)"' || {
             echo "::error::SSH 登录失败 —— 私钥与服务器 authorized_keys 中的公钥不匹配，或 SSH_USER/SSH_PORT 有误"; exit 1; }
 
-      - name: Upload artifact
+      - name: Publish artifact to dist branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # 每篇一个孤立提交，强制覆盖 dist 分支；服务器用 git fetch 拉取，
+          # 走的是「境内 -> GitHub」下载方向（实测 ~259KB/s），
+          # 比 runner 直推服务器（~17KB/s）快一个数量级。
+          mkdir -p /tmp/distpush && cd /tmp/distpush
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cp "$GITHUB_WORKSPACE/ccwy-web.tar.gz" .
+          printf 'sha=%s\nrun=%s\nbuilt_at=%s\n' \
+            "${{ github.sha }}" "${{ github.run_id }}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > COMMIT_INFO
+          git add ccwy-web.tar.gz COMMIT_INFO
+          git commit -q -m "deploy ${{ github.sha }}"
+          git push -q -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" \
+            HEAD:refs/heads/dist
+          echo "已推送到 dist 分支"
+
+      - name: Upload deploy script
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -151,12 +176,9 @@ jobs:
         run: |
           set -euo pipefail
           PORT="${SSH_PORT:-22}"
-          ssh -i ~/.ssh/deploy_key -p "$PORT" "$SSH_USER@$SSH_HOST" \
-            "mkdir -p ~/$APP_DIR/incoming ~/$APP_DIR/releases"
-          scp -i ~/.ssh/deploy_key -P "$PORT" ccwy-web.tar.gz \
-            "$SSH_USER@$SSH_HOST:~/$APP_DIR/incoming/${{ github.sha }}.tar.gz"
+          # 只传几 KB 的脚本；大文件走 dist 分支
           scp -i ~/.ssh/deploy_key -P "$PORT" deploy/deploy-remote.sh \
-            "$SSH_USER@$SSH_HOST:~/$APP_DIR/deploy-remote.sh"
+            "$SSH_USER@$SSH_HOST:~/apps/ccwy-web/deploy-remote.sh"
 
       - name: Activate release
         env:

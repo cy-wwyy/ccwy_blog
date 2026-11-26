@@ -11,8 +11,10 @@
 ```
 push → GitHub Actions(x86) → npm ci → build → standalone 打包
                                 │
-                                ├─ scp tar.gz + deploy-remote.sh
+                                ├─ 推到 dist 分支（12MB）
                                 ▼
+                          服务器 git fetch（下载方向，~259KB/s）
+                                │
                          服务器 ~/apps/ccwy-web/
                            ├── current -> releases/20261126-2210-abc1234
                            ├── previous -> releases/...
@@ -167,3 +169,20 @@ tail -f ~/logs/ccwy-web.log               # 单元里配了日志重定向
 | `Write SSH key and probe host` | 私钥无法解析 |
 | `Probe SSH login` | 私钥与服务器 `authorized_keys` 不匹配 |
 | `Build` | AMAP 两个 key 为空 |
+
+## 为什么是 dist 分支而不是直接 scp
+
+最初用 `scp` 从 runner 直接把 12MB 产物推到服务器，实测只有 **~17KB/s**，
+一次部署要 12–15 分钟，经常顶到 job 超时。
+
+改成「runner 推到 GitHub 的 dist 分支 → 服务器 git fetch」之后：
+
+| 方向 | 实测速度 |
+|---|---|
+| runner → 服务器（跨境上传） | ~17 KB/s |
+| 服务器 → GitHub（跨境下载） | ~259 KB/s |
+
+差一个数量级。现在每次部署的传输约 50 秒。
+
+`dist` 分支每次是一个**孤立提交**并强制覆盖，所以历史不会无限增长；
+服务器侧每次 `rm -rf` 后重新 `git init` + `fetch --depth 1`，避免浅克隆的状态问题。
