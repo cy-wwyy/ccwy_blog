@@ -28,7 +28,7 @@ const navItems = [
   { href: "/", label: "首页", icon: Home },
   { href: "/albums", label: "相册", icon: Camera },
   { href: "/trips", label: "行程", icon: MapPin },
-  { href: "/projects", label: "作品集", icon: Images },
+  { href: "/projects", label: "项目", icon: Images },
   { href: "/about", label: "关于", icon: Info },
 ];
 

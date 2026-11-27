@@ -259,6 +259,13 @@ ${PROXY_HEADERS}
         proxy_pass http://127.0.0.1:8000;
     }
 
+    # ── 个人项目（静态子应用）────────────────────────────────
+    # 每个项目一个目录：/srv/www/<name>/，独立构建、rsync 部署，不经过 Next
+    location /resume/ {
+        alias /srv/www/resume/;
+        index index.html;
+    }
+
     location / {
 ${LOC_HEADERS}
 ${PROXY_HEADERS}
